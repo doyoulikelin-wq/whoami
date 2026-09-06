@@ -16,7 +16,7 @@ struct WhoAmIApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(store)
-                .tint(Palette.coral)
+                .tint(Palette.accent)
                 .preferredColorScheme(.light)
         }
     }
@@ -33,7 +33,7 @@ struct RootView: View {
                 TodayView(onCompose: { composing = true }, onJournal: { selectedTab = 1 })
                     .toolbar { composeToolbar }
             }
-            .tabItem { Label("今天", systemImage: "sun.max") }.tag(0)
+            .tabItem { Label("今天", systemImage: "circle.dotted") }.tag(0)
 
             NavigationStack {
                 JournalHomeView(onCompose: { composing = true })
@@ -64,7 +64,7 @@ struct RootView: View {
                 Image(systemName: "square.and.pencil")
                     .font(.system(size: 19, weight: .regular))
                     .frame(width: 44, height: 44)
-            }.accessibilityLabel("记一下").accessibilityIdentifier("compose-toolbar")
+            }.accessibilityLabel("新增记录").accessibilityIdentifier("compose-toolbar")
         }
     }
 }

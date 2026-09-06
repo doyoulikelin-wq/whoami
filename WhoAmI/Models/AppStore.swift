@@ -39,13 +39,13 @@ enum LifeDomain: String, CaseIterable, Codable, Identifiable {
     }
     var color: Color {
         switch self {
-        case .career: Palette.coral
-        case .finance: Color(hex: 0x92734E)
-        case .body: Color(hex: 0x668983)
-        case .emotion: Color(hex: 0x9A7893)
-        case .learning: Palette.sage
-        case .relationships: Color(hex: 0x6C86A4)
-        case .life: Color(hex: 0xB38A43)
+        case .career: Color(hex: 0x506070)
+        case .finance: Color(hex: 0x62737D)
+        case .body: Color(hex: 0x667773)
+        case .emotion: Color(hex: 0x6D6B7B)
+        case .learning: Color(hex: 0x555F69)
+        case .relationships: Color(hex: 0x586877)
+        case .life: Color(hex: 0x75746D)
         }
     }
 }
@@ -141,7 +141,7 @@ final class AppStore: ObservableObject {
     @Published var mood: Mood? = nil { didSet { persist() } }
     @Published var energy = 3 { didSet { persist() } }
     @Published var reviewInterval = 3 { didSet { persist() } }
-    @Published var focus = "把时间留给真正重要的事" { didSet { persist() } }
+    @Published var focus = "核对目标、投入与结果" { didSet { persist() } }
     @Published var draftText = "" { didSet { persist() } }
     @Published var draftDomain: LifeDomain? { didSet { persist() } }
     @Published var draftMood: Mood? { didSet { persist() } }
@@ -180,7 +180,7 @@ final class AppStore: ObservableObject {
     var sortedEntries: [JournalEntry] { entries.sorted { $0.createdAt > $1.createdAt } }
     var realEntries: [JournalEntry] { sortedEntries.filter { !$0.isDemo } }
     var hasExamples: Bool { entries.contains(where: \.isDemo) || projects.contains(where: \.isDemo) }
-    var energyLabel: String { ["需要休息", "精力偏低", "精力尚可", "精力充足", "充满活力"][min(max(energy, 1), 5) - 1] }
+    var energyLabel: String { ["精力很低", "精力偏低", "精力中等", "精力较高", "精力很高"][min(max(energy, 1), 5) - 1] }
     func entry(_ id: UUID) -> JournalEntry? { entries.first { $0.id == id } }
     func entries(in domain: LifeDomain) -> [JournalEntry] { sortedEntries.filter { $0.domain == domain } }
 
@@ -234,26 +234,26 @@ final class AppStore: ObservableObject {
             Calendar.current.date(byAdding: .hour, value: hour,
                 to: Calendar.current.date(byAdding: .day, value: offset, to: today)!)!
         }
-        let project = GrowthProject(title: "做一个自己的 App", summary: "从真实需要出发，先把最重要的体验做好。",
-                                    domain: .career, progress: 0.35, nextStep: "完成第一版记录页面", isDemo: true)
-        projects.append(contentsOf: [project, GrowthProject(title: "重新开始阅读", summary: "慢一点读，留下真正有用的想法。",
-                    domain: .learning, progress: 0.6, nextStep: "读完一章，记下一个问题", isDemo: true)])
-        questions.append(contentsOf: [OpenQuestion(title: "什么事情让我觉得时间花得值得？", note: "留意那些做完以后，内心更安定的时刻。", isDemo: true),
-                     OpenQuestion(title: "我是在准备，还是在推迟开始？", note: "从一次具体的选择里寻找答案。", isDemo: true)])
+        let project = GrowthProject(title: "个人记录 App", summary: "验证从输入到复盘的完整流程，记录错误与未完成项。",
+                                    domain: .career, progress: 0.35, nextStep: "完成记录流程验证", isDemo: true)
+        projects.append(contentsOf: [project, GrowthProject(title: "完成一本书的阅读", summary: "按章节记录论点、证据与待核实的问题。",
+                    domain: .learning, progress: 0.6, nextStep: "完成一章并列出论据", isDemo: true)])
+        questions.append(contentsOf: [OpenQuestion(title: "我的时间投入是否对应当前目标？", note: "比较计划用时、实际用时与产生的结果。", isDemo: true),
+                     OpenQuestion(title: "继续准备解决了哪个具体障碍？", note: "记录每次修改的理由，区分必要准备与延迟交付。", isDemo: true)])
         let examples = [
-            JournalEntry(title: "先做出来，再慢慢变好", body: "今天专注解决一个小问题，虽然进度不大，但更有方向感了。\n\n比起想清楚所有细节，我更想先做一份能用的版本。", createdAt: day(0, 9), domain: .learning, mood: .focused, projectID: project.id, isDemo: true),
-            JournalEntry(title: "给正在做的事一点耐心", body: "过程中遇到了一些阻力。提醒自己放慢节奏，把基础打好再说。\n\n今天把记录流程画了出来，下一步试试亲手用它。", createdAt: day(-1, 19), domain: .career, mood: .calm, projectID: project.id, isDemo: true),
-            JournalEntry(title: "出去走走，想法也松动了", body: "傍晚散步了半小时。回来以后，那个卡了一下午的问题，似乎有了新的角度。", createdAt: day(-1, 17), domain: .body, mood: .happy, isDemo: true),
-            JournalEntry(title: "把重要的事情放在前面", body: "关掉了消息提醒，留了四十分钟给自己。读了几页书，也记下了两个想继续想的问题。", createdAt: day(-2, 10), domain: .life, mood: .calm, isDemo: true),
-            JournalEntry(title: "留一份自己的安全感", body: "整理了这个月的固定开支。示例存款为 28,600 元，先看清资源，再决定下一步。", createdAt: day(-3, 20), domain: .finance, mood: .calm, isDemo: true)
+            JournalEntry(title: "先验证，再扩展", body: "今天用一个可操作的页面验证记录流程。我完成了输入、保存和重新打开三个步骤，发现日期筛选还没有验证。\n\n页面能运行让我暂时停止扩展功能，但这不等于流程已通过测试。下一步检查空记录和重启后的数据。", createdAt: day(0, 9), domain: .learning, mood: .focused, projectID: project.id, isDemo: true),
+            JournalEntry(title: "交付标准仍不明确", body: "今天用 45 分钟修改了三版页面，但没有写出验收条件。遇到布局问题后，我感到焦躁，继续调整了间距和颜色。\n\n这些修改没有解决交付范围的问题。我需要先列出本次必须完成的功能。", createdAt: day(-1, 19), domain: .career, mood: .calm, projectID: project.id, isDemo: true),
+            JournalEntry(title: "散步前后的状态", body: "下午连续坐了两个小时，我开始反复切换窗口，注意力难以维持。傍晚步行 30 分钟后，主观疲劳感下降。\n\n返回桌面后，我列出了原问题的两个处理方向。一次记录不足以判断变化是否由散步引起。", createdAt: day(-1, 17), domain: .body, mood: .happy, isDemo: true),
+            JournalEntry(title: "四十分钟的实际投入", body: "我关闭消息提醒，安排了 40 分钟阅读。实际阅读约 25 分钟，其余时间用于查资料。\n\n原计划完成一章，最后没有完成。我记下了两个需要核实的问题，下一次要把查阅时间单独计算。", createdAt: day(-2, 10), domain: .life, mood: .calm, isDemo: true),
+            JournalEntry(title: "本月资金与固定支出", body: "我核对了本月账目。示例存款为 28,600 元，每月固定支出为 5,400 元，未到账收入没有计入存款。\n\n看到支出总额后，我感到紧张。目前还没有决定削减哪一项，需要先区分必要支出和可调整支出。", createdAt: day(-3, 20), domain: .finance, mood: .calm, isDemo: true)
         ]
         entries.append(contentsOf: examples)
         reviews.append(ReviewReport(createdAt: .now, periodStart: day(-2, 0), periodEnd: .now,
             entryIDs: Array(examples.prefix(4).map(\.id)),
-            summary: "这几天，你在做项目、阅读和散步之间，慢慢找到了自己的节奏。四段记录留下了这些变化。",
-            observation: "从反复准备，到尝试做出一个小版本，你开始把注意力放在能完成的下一步。",
-            hypothesis: "任务足够具体时，开始可能会更容易。这只是示例材料中的一种解释，还需要更多经历来验证。",
-            action: "给最重要的项目留 25 分钟，只完成一个能展示的小部分。", isDemo: true, isLocal: false))
+            summary: "这段示例包含 4 条记录，涉及原型验证、交付标准、身体状态和时间投入。记录中同时存在已完成步骤与未完成检查。",
+            observation: "你完成了输入、保存和重新打开的操作，但日期筛选尚未验证。另一条记录显示，交付标准未明确时，你连续修改了三版页面。",
+            hypothesis: "交付标准不明确可能使工作转向反复修改界面。现有四条示例不足以确定原因，也不能据此判断长期行为。",
+            action: "为当前项目列出三条验收条件，完成一项后记录结果与耗时。", isDemo: true, isLocal: false))
     }
 
     @discardableResult
@@ -262,13 +262,13 @@ final class AppStore: ObservableObject {
         let start = Calendar.current.date(byAdding: .day, value: -(reviewInterval - 1), to: Calendar.current.startOfDay(for: now))!
         let selected = realEntries.filter { $0.createdAt >= start && $0.createdAt <= now }
         let domains = Set(selected.compactMap(\.domain))
-        let summary = selected.isEmpty ? "这段时间还没有你的记录。先留下一个真实片段，回顾会从这里开始。" :
-            "这 \(reviewInterval) 天，你留下了 \(selected.count) 条记录，涉及 \(domains.count) 个观察维度。以下保留了可以回看的原文。"
+        let summary = selected.isEmpty ? "所选时段没有真实记录，无法整理回顾。" :
+            "最近 \(reviewInterval) 天，你留下了 \(selected.count) 条记录，涉及 \(domains.count) 个观察维度。原文列在下方。"
         let report = ReviewReport(createdAt: now, periodStart: start, periodEnd: now,
             entryIDs: selected.map(\.id), summary: summary,
-            observation: selected.count < 3 ? "目前材料较少，暂不足以判断持续的变化。" : "从这些记录中，选一个你最想继续理解的时刻。",
-            hypothesis: "这是按日期和标签整理的本地回顾。AI 分析尚未接入，不推断你的动机或长期状态。",
-            action: "写下一个小行动，下次回来看看发生了什么。")
+            observation: selected.count < 3 ? "记录数量较少，不足以判断持续变化。" : "逐条核对事件、反应和结果，确认是否存在重复情况。",
+            hypothesis: "本回顾仅按日期与标签整理记录。AI 分析尚未接入，不推断动机或长期状态。",
+            action: "列出一项可执行的行动，并记录完成时间与结果。")
         reviews.insert(report, at: 0)
         return report
     }

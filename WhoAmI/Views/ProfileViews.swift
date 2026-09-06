@@ -9,7 +9,7 @@ struct ProfileHomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
-                PageHeading(eyebrow: "MY WORLD", title: "慢慢认识自己。", subtitle: "从在意的事，到正在成为的自己。")
+                PageHeading(eyebrow: "PROFILE", title: "自我档案", subtitle: "维度、项目与待解问题。")
                 focusPanel
                 domainsSection
                 projectsSection
@@ -19,7 +19,7 @@ struct ProfileHomeView: View {
                 } label: {
                     HStack(spacing: 13) {
                         Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 19)).foregroundStyle(Palette.sage)
+                            .font(.system(size: 19)).foregroundStyle(Palette.steel)
                         Text("数据与设置").font(.system(size: 16, weight: .medium))
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption)
@@ -45,32 +45,32 @@ struct ProfileHomeView: View {
                 Image("Companion")
                     .resizable().scaledToFill().frame(width: 138, height: 92)
                     .offset(x: -54).frame(width: 78, height: 92, alignment: .leading)
-                    .clipped().clipShape(RoundedRectangle(cornerRadius: 23))
+                    .clipped().clipShape(RoundedRectangle(cornerRadius: 10))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text("现在，我更在意").font(.system(size: 11, weight: .medium))
+                        Text("当前关注").font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Palette.secondary)
                         Spacer(minLength: 0)
                         Image(systemName: "pencil").font(.system(size: 13))
-                            .foregroundStyle(Palette.sage)
+                            .foregroundStyle(Palette.steel)
                     }
-                    Text(store.focus.isEmpty ? "什么值得你留出时间？" : store.focus)
+                    Text(store.focus.isEmpty ? "确定当前的优先事项" : store.focus)
                         .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.ink)
                         .multilineTextAlignment(.leading).lineSpacing(4)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(18).background(Palette.cream, in: RoundedRectangle(cornerRadius: 24))
+            .padding(16).background(Palette.surface, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("编辑现在重视的事，\(store.focus)")
+        .accessibilityLabel("编辑当前关注，\(store.focus)")
         .accessibilityIdentifier("profile.editFocus")
     }
 
     private var domainsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeading(title: "生活的不同切面")
+            SectionHeading(title: "观察维度")
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 ForEach(LifeDomain.allCases) { domain in
                     NavigationLink { DomainDetailView(domain: domain) } label: {
@@ -89,7 +89,7 @@ struct ProfileHomeView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                        .background(Palette.paper, in: RoundedRectangle(cornerRadius: 19))
+                        .background(Palette.paper, in: RoundedRectangle(cornerRadius: 12))
                     }.buttonStyle(.plain)
                 }
             }
@@ -98,18 +98,18 @@ struct ProfileHomeView: View {
 
     private func domainCount(_ domain: LifeDomain) -> String {
         let entries = store.entries(in: domain)
-        if entries.isEmpty { return "等待一个生活片段" }
+        if entries.isEmpty { return "暂无记录" }
         let ownCount = entries.filter { !$0.isDemo }.count
         if ownCount == 0 { return "\(entries.count) 段示例记录" }
-        return "\(ownCount) 段自己的记录"
+        return "\(ownCount) 条个人记录"
     }
 
     private var projectsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeading(title: "正在投入的事", trailing: "添加") { showingProjectEditor = true }
+            SectionHeading(title: "项目进展", trailing: "添加") { showingProjectEditor = true }
                 .accessibilityIdentifier("profile.projects")
             if store.projects.isEmpty {
-                EmptyState(icon: "leaf", title: "给一件事留一点位置", detail: "可以是一个计划，也可以是想慢慢练习的事。")
+                EmptyState(icon: "square.stack", title: "暂无项目", detail: "添加一个项目，明确目标、进度与下一步行动。")
             } else {
                 ForEach(store.projects) { project in
                     NavigationLink { ProjectDetailView(projectID: project.id) } label: {
@@ -123,16 +123,16 @@ struct ProfileHomeView: View {
 
     private var questionsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeading(title: "还在想的问题", trailing: "添加") { showingQuestionEditor = true }
+            SectionHeading(title: "待解问题", trailing: "添加") { showingQuestionEditor = true }
                 .accessibilityIdentifier("profile.questions")
             if store.questions.isEmpty {
-                EmptyState(icon: "text.bubble", title: "答案可以慢慢来", detail: "先留下一个你想继续理解的问题。")
+                EmptyState(icon: "text.bubble", title: "暂无问题", detail: "记录需要继续观察、尚未确定答案的问题。")
             } else {
                 ForEach(store.questions) { question in
                     NavigationLink { QuestionDetailView(questionID: question.id) } label: {
                         HStack(alignment: .top, spacing: 13) {
                             Image(systemName: "quote.opening").font(.system(size: 17))
-                                .foregroundStyle(Palette.coral).padding(.top, 3)
+                                .foregroundStyle(Palette.accent).padding(.top, 3)
                             VStack(alignment: .leading, spacing: 7) {
                                 HStack(alignment: .firstTextBaseline, spacing: 7) {
                                     Text(question.title).font(.system(size: 16, weight: .medium))
@@ -168,7 +168,7 @@ private struct ProfileProjectRow: View {
                         if project.isDemo { Text("示例").font(.system(size: 10)).foregroundStyle(Palette.secondary) }
                     }
                     if !project.nextStep.isEmpty {
-                        Text("下一步 · \(project.nextStep)").font(.system(size: 12))
+                        Text("下一步行动 · \(project.nextStep)").font(.system(size: 12))
                             .foregroundStyle(Palette.secondary).lineLimit(2).lineSpacing(3)
                     }
                 }
@@ -203,7 +203,7 @@ struct ProjectDetailView: View {
                             TagPill(text: project.domain.title, icon: project.domain.icon, color: project.domain.color, filled: true)
                             if project.isDemo { TagPill(text: "示例") }
                         }
-                        Text(project.title).font(.system(size: 29, weight: .semibold, design: .rounded))
+                        Text(project.title).font(.system(size: 29, weight: .semibold))
                             .foregroundStyle(Palette.ink).lineSpacing(5)
                         if !project.summary.isEmpty {
                             Text(project.summary).font(.system(size: 16)).foregroundStyle(Palette.secondary).lineSpacing(7)
@@ -211,25 +211,25 @@ struct ProjectDetailView: View {
                     }
                     VStack(alignment: .leading, spacing: 13) {
                         HStack {
-                            Text("按自己的节奏").font(.subheadline).foregroundStyle(Palette.secondary)
+                            Text("项目进度").font(.subheadline).foregroundStyle(Palette.secondary)
                             Spacer()
                             Text("\(Int((min(max(project.progress, 0), 1) * 100).rounded()))%")
                                 .font(.system(size: 18, weight: .medium)).monospacedDigit().foregroundStyle(project.domain.color)
                         }
                         ProgressView(value: min(max(project.progress, 0), 1)).tint(project.domain.color)
-                        Text("进度由你自己定义。")
+                        Text("手动更新的进度估计。")
                             .font(.system(size: 12)).foregroundStyle(Palette.secondary)
                     }
                     VStack(alignment: .leading, spacing: 13) {
-                        Label("下一小步", systemImage: "arrow.turn.down.right")
-                            .font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.sage)
-                        Text(project.nextStep.isEmpty ? "留一个小到愿意开始的行动。" : project.nextStep)
+                        Label("下一步行动", systemImage: "arrow.turn.down.right")
+                            .font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.steel)
+                        Text(project.nextStep.isEmpty ? "尚未设定下一步行动。" : project.nextStep)
                             .font(.system(size: 17, weight: .medium)).foregroundStyle(Palette.ink).lineSpacing(6)
                     }.paperPanel()
                     VStack(alignment: .leading, spacing: 8) {
-                        SectionHeading(title: "项目里的片段")
+                        SectionHeading(title: "关联记录")
                         if linkedEntries.isEmpty {
-                            EmptyState(icon: "text.alignleft", title: "还没有关联的记录", detail: "记录生活片段时，可以把它放进这个项目。")
+                            EmptyState(icon: "text.alignleft", title: "暂无关联记录", detail: "创建记录时，可选择关联到此项目。")
                         } else {
                             ForEach(linkedEntries) { entry in
                                 NavigationLink { EntryDetailView(entryID: entry.id) } label: { EntryRow(entry: entry) }
@@ -240,25 +240,25 @@ struct ProjectDetailView: View {
                     }
                     NavigationLink { DomainDetailView(domain: project.domain) } label: {
                         HStack(spacing: 10) {
-                            Text("也看看\(project.domain.title)的其他片段")
-                                .font(.system(size: 14)).foregroundStyle(Palette.sage)
+                            Text("查看\(project.domain.title)的其他记录")
+                                .font(.system(size: 14)).foregroundStyle(Palette.steel)
                             Spacer()
-                            Image(systemName: "arrow.right").font(.system(size: 12)).foregroundStyle(Palette.sage)
+                            Image(systemName: "arrow.right").font(.system(size: 12)).foregroundStyle(Palette.steel)
                         }.padding(.vertical, 14).contentShape(Rectangle())
                     }.buttonStyle(.plain)
                 }.padding(24)
             } else {
-                EmptyState(icon: "archivebox", title: "这个项目已移除", detail: "与它相关的生活记录依然保留。")
+                EmptyState(icon: "archivebox", title: "项目已移除", detail: "相关记录仍然保留。")
             }
         }
-        .pageBackground().navigationTitle("正在投入的事").navigationBarTitleDisplayMode(.inline)
+        .pageBackground().navigationTitle("项目详情").navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if project != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("编辑项目", systemImage: "pencil") { showingEditor = true }
                         Button("删除项目", systemImage: "trash", role: .destructive) { confirmingDelete = true }
-                    } label: { Image(systemName: "ellipsis.circle").foregroundStyle(Palette.sage) }
+                    } label: { Image(systemName: "ellipsis.circle").foregroundStyle(Palette.steel) }
                         .accessibilityLabel("项目操作")
                 }
             }
@@ -296,41 +296,41 @@ struct QuestionDetailView: View {
                 VStack(alignment: .leading, spacing: 30) {
                     VStack(alignment: .leading, spacing: 19) {
                         HStack {
-                            Image(systemName: "quote.opening").font(.system(size: 30, weight: .light)).foregroundStyle(Palette.coral)
+                            Image(systemName: "quote.opening").font(.system(size: 30, weight: .light)).foregroundStyle(Palette.accent)
                             Spacer()
                             if question.isDemo { TagPill(text: "示例") }
                         }
-                        Text(question.title).font(.system(size: 28, weight: .semibold, design: .rounded))
+                        Text(question.title).font(.system(size: 28, weight: .semibold))
                             .foregroundStyle(Palette.ink).lineSpacing(8)
-                        Text("不急着下结论，留意生活里的线索。")
+                        Text("保留问题，持续核对事实与判断。")
                             .font(.subheadline).foregroundStyle(Palette.secondary).lineSpacing(5)
                     }
                     Divider().overlay(Palette.line)
                     VStack(alignment: .leading, spacing: 16) {
-                        SectionHeading(title: "留给自己的线索")
-                        Text(question.note.isEmpty ? "当你有了新的想法，可以随时回来补充。" : question.note)
+                        SectionHeading(title: "观察与线索")
+                        Text(question.note.isEmpty ? "尚未添加观察或相关背景。" : question.note)
                             .font(.system(size: 17)).foregroundStyle(question.note.isEmpty ? Palette.secondary : Palette.ink)
                             .lineSpacing(9).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                     }
                     Button { showingEditor = true } label: {
-                        Label("补充想法", systemImage: "pencil")
-                            .font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.sage)
+                        Label("补充观察", systemImage: "pencil")
+                            .font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.steel)
                             .padding(.vertical, 13).padding(.horizontal, 18)
-                            .background(Palette.sage.opacity(0.08), in: Capsule())
+                            .background(Palette.steel.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                     }.buttonStyle(.plain)
                 }.padding(24)
             } else {
-                EmptyState(icon: "text.bubble", title: "这个问题已移除", detail: "新的问题，随时可以再留下。")
+                EmptyState(icon: "text.bubble", title: "问题已移除", detail: "可返回档案添加新的问题。")
             }
         }
-        .pageBackground().navigationTitle("还在想的问题").navigationBarTitleDisplayMode(.inline)
+        .pageBackground().navigationTitle("问题详情").navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if question != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("编辑问题", systemImage: "pencil") { showingEditor = true }
                         Button("删除问题", systemImage: "trash", role: .destructive) { confirmingDelete = true }
-                    } label: { Image(systemName: "ellipsis.circle").foregroundStyle(Palette.sage) }
+                    } label: { Image(systemName: "ellipsis.circle").foregroundStyle(Palette.steel) }
                         .accessibilityLabel("问题操作")
                 }
             }
@@ -364,9 +364,9 @@ struct SettingsView: View {
                     Text("每 2 天").tag(2)
                     Text("每 3 天").tag(3)
                     Text("每 4 天").tag(4)
-                }.tint(Palette.sage)
-            } header: { Text("适合自己的节奏") } footer: {
-                Text("决定每次回顾涵盖多少天。什么时候回来看看，由你决定。")
+                }.tint(Palette.steel)
+            } header: { Text("检视范围") } footer: {
+                Text("设置每次回顾涵盖的天数，可随时手动生成。")
             }
 
             Section {
@@ -375,19 +375,19 @@ struct SettingsView: View {
                 if let exportURL {
                     ShareLink(item: exportURL) {
                         Label("导出记录备份", systemImage: "square.and.arrow.up")
-                    }.tint(Palette.sage).accessibilityIdentifier("settings.export")
+                    }.tint(Palette.steel).accessibilityIdentifier("settings.export")
                 } else {
                     Button { prepareExport() } label: {
                         Label("准备记录备份", systemImage: "square.and.arrow.up")
-                    }.tint(Palette.sage)
+                    }.tint(Palette.steel)
                 }
-            } header: { Text("你的记录，自己保管") } footer: {
+            } header: { Text("数据保存与备份") } footer: {
                 Text("备份包含记录、项目、问题和复盘。卸载 App 会删除此设备上的数据，建议定期导出保存。")
             }
 
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("回顾从真实记录开始").font(.system(size: 15, weight: .medium))
+                    Text("回顾依据").font(.system(size: 15, weight: .medium))
                     Text("目前根据日期与标签整理记录，AI 分析尚未接入。")
                         .font(.system(size: 13)).foregroundStyle(Palette.secondary).lineSpacing(4)
                 }.padding(.vertical, 5)
@@ -398,7 +398,7 @@ struct SettingsView: View {
                     Button("清除示例内容", role: .destructive) { confirmingClear = true }
                         .accessibilityIdentifier("settings.clearExamples")
                 } header: { Text("示例内容") } footer: {
-                    Text("只移除标为“示例”的内容，你自己添加的内容会保留。")
+                    Text("仅移除标为“示例”的内容，个人记录会保留。")
                 }
             }
         }
@@ -433,21 +433,21 @@ private struct FocusEditorView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("现在最想把时间留给什么？", text: $focus, axis: .vertical)
+                    TextField("当前最重要的事项或方向", text: $focus, axis: .vertical)
                         .lineLimit(3...6).accessibilityIdentifier("profile.focusText")
-                } header: { Text("现在，我更在意") } footer: {
-                    Text("可以是一件事、一种感受，或一个想靠近的方向。以后也可以改变。")
+                } header: { Text("当前关注") } footer: {
+                    Text("记录当前的优先事项，根据实际情况调整。")
                 }
             }
             .scrollContentBackground(.hidden).pageBackground()
-            .navigationTitle("此刻重视的事").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("当前关注").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() }.tint(Palette.secondary) }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
                         store.focus = focus.trimmingCharacters(in: .whitespacesAndNewlines)
                         dismiss()
-                    }.fontWeight(.semibold).tint(Palette.coral)
+                    }.fontWeight(.semibold).tint(Palette.accent)
                 }
             }
             .onAppear { focus = store.focus }
@@ -478,37 +478,37 @@ private struct ProjectEditorView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("想投入的一件事", text: $title, axis: .vertical)
+                    TextField("项目名称", text: $title, axis: .vertical)
                         .lineLimit(1...3).accessibilityIdentifier("project.title")
-                    TextField("为什么想做这件事？", text: $summary, axis: .vertical)
+                    TextField("项目目标与背景", text: $summary, axis: .vertical)
                         .lineLimit(3...6).accessibilityIdentifier("project.summary")
                     Picker("观察维度", selection: $domain) {
                         ForEach(LifeDomain.allCases) { domain in Text(domain.title).tag(domain) }
-                    }.tint(Palette.sage)
-                } header: { Text("给它一个方向") }
+                    }.tint(Palette.steel)
+                } header: { Text("项目定义") }
                 Section {
-                    TextField("小到愿意开始的一步", text: $nextStep, axis: .vertical)
+                    TextField("一项具体、可执行的行动", text: $nextStep, axis: .vertical)
                         .lineLimit(2...4).accessibilityIdentifier("project.nextStep")
-                } header: { Text("下一小步") }
+                } header: { Text("下一步行动") }
                 Section {
                     HStack {
                         Text("当前进度")
                         Spacer()
                         Text("\(Int((progress * 100).rounded()))%")
-                            .monospacedDigit().foregroundStyle(Palette.sage)
+                            .monospacedDigit().foregroundStyle(Palette.steel)
                     }
-                    Slider(value: $progress, in: 0...1, step: 0.05).tint(Palette.coral)
+                    Slider(value: $progress, in: 0...1, step: 0.05).tint(Palette.accent)
                         .accessibilityLabel("项目进度")
                         .accessibilityValue("百分之\(Int((progress * 100).rounded()))")
-                } header: { Text("按自己的节奏") } footer: { Text("这不是成绩，只是你此刻对进展的感受。") }
+                } header: { Text("进展评估") } footer: { Text("进度为个人估计，可依据实际结果调整。") }
             }
             .scrollContentBackground(.hidden).pageBackground()
-            .navigationTitle(project == nil ? "一件想投入的事" : "编辑项目")
+            .navigationTitle(project == nil ? "新建项目" : "编辑项目")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() }.tint(Palette.secondary) }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") { save() }.fontWeight(.semibold).tint(Palette.coral)
+                    Button("保存") { save() }.fontWeight(.semibold).tint(Palette.accent)
                         .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .accessibilityIdentifier("project.save")
                 }
@@ -544,21 +544,21 @@ private struct QuestionEditorView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("一个想继续理解的问题", text: $title, axis: .vertical)
+                    TextField("需要继续观察的问题", text: $title, axis: .vertical)
                         .lineLimit(2...5).accessibilityIdentifier("question.title")
-                } header: { Text("我在想") }
+                } header: { Text("待解问题") }
                 Section {
-                    TextField("它从哪里来？你已经有哪些想法？", text: $note, axis: .vertical)
+                    TextField("问题背景、已有观察与判断", text: $note, axis: .vertical)
                         .lineLimit(6...12).accessibilityIdentifier("question.note")
-                } header: { Text("留一点线索") } footer: { Text("不用马上找到答案。新的发现可以随时补充。") }
+                } header: { Text("观察与线索") } footer: { Text("区分已经确认的事实与仍需验证的判断。") }
             }
             .scrollContentBackground(.hidden).pageBackground()
-            .navigationTitle(question == nil ? "留下一个问题" : "编辑问题")
+            .navigationTitle(question == nil ? "新建问题" : "编辑问题")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() }.tint(Palette.secondary) }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") { save() }.fontWeight(.semibold).tint(Palette.coral)
+                    Button("保存") { save() }.fontWeight(.semibold).tint(Palette.accent)
                         .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .accessibilityIdentifier("question.save")
                 }

@@ -12,8 +12,8 @@ struct ReviewHomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                PageHeading(eyebrow: "REFLECTION", title: "换个角度，看自己。",
-                            subtitle: "每一次回看，都是一次新的认识。")
+                PageHeading(eyebrow: "REVIEW", title: "检视变化",
+                            subtitle: "依据记录，核对判断。")
 
                 VStack(alignment: .leading, spacing: 15) {
                     HStack {
@@ -21,7 +21,7 @@ struct ReviewHomeView: View {
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(Palette.ink)
                         Spacer()
-                        Text("由你决定节奏")
+                        Text("按周期整理")
                             .font(.caption).foregroundStyle(Palette.secondary)
                     }
                     Picker("回顾周期", selection: $store.reviewInterval) {
@@ -31,13 +31,13 @@ struct ReviewHomeView: View {
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("review.interval")
-                    Text("每次回看最近 \(store.reviewInterval) 天，随时可以手动开始。")
+                    Text("覆盖最近 \(store.reviewInterval) 天，可随时手动生成。")
                         .font(.caption).foregroundStyle(Palette.secondary)
                 }
                 .paperPanel()
 
                 VStack(alignment: .leading, spacing: 12) {
-                    PrimaryButton(title: "回看这几天", icon: "text.alignleft") {
+                    PrimaryButton(title: "生成回顾", icon: "text.alignleft") {
                         let review = store.createLocalReview()
                         createdReviewID = review.id
                         showingCreatedReview = true
@@ -50,7 +50,7 @@ struct ReviewHomeView: View {
 
                 if let latest = sortedReviews.first {
                     VStack(alignment: .leading, spacing: 15) {
-                        SectionHeading(title: "最近一次回看")
+                        SectionHeading(title: "最近回顾")
                         NavigationLink {
                             ReviewDetailView(reviewID: latest.id)
                         } label: {
@@ -60,14 +60,14 @@ struct ReviewHomeView: View {
                         .accessibilityIdentifier("review.latest")
                     }
                 } else {
-                    EmptyState(icon: "text.book.closed", title: "从一次回看开始",
-                               detail: "把这几天的记录放在一起，\n看看发生了什么，下一步想做什么。")
+                    EmptyState(icon: "text.book.closed", title: "暂无回顾",
+                               detail: "汇总最近几天的记录，\n核对变化并确定下一步行动。")
                         .paperPanel()
                 }
 
                 if sortedReviews.count > 1 {
                     VStack(alignment: .leading, spacing: 15) {
-                        SectionHeading(title: "之前的回看")
+                        SectionHeading(title: "历史回顾")
                         VStack(spacing: 0) {
                             ForEach(Array(sortedReviews.dropFirst())) { review in
                                 NavigationLink {
@@ -83,7 +83,7 @@ struct ReviewHomeView: View {
                             }
                         }
                         .padding(.horizontal, 20)
-                        .background(Palette.paper, in: RoundedRectangle(cornerRadius: 22))
+                        .background(Palette.paper, in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
             }
@@ -103,19 +103,19 @@ struct ReviewHomeView: View {
                 ReviewOriginPill(review: review)
                 Spacer(minLength: 8)
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 16, weight: .medium)).foregroundStyle(Palette.sage)
+                    .font(.system(size: 16, weight: .medium)).foregroundStyle(Palette.steel)
             }
             VStack(alignment: .leading, spacing: 7) {
                 Text(DateText.range(review.periodStart, review.periodEnd))
                     .font(.caption).foregroundStyle(Palette.secondary)
-                Text("这几天的你")
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+                Text("阶段观察")
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(Palette.ink)
             }
             VStack(alignment: .leading, spacing: 17) {
-                ReviewPreviewRow(number: "01", title: "发生了什么", text: review.summary)
-                ReviewPreviewRow(number: "02", title: "值得留意的变化", text: review.observation)
-                ReviewPreviewRow(number: "03", title: "接下来的一小步", text: review.action)
+                ReviewPreviewRow(number: "01", title: "记录概况", text: review.summary)
+                ReviewPreviewRow(number: "02", title: "变化线索", text: review.observation)
+                ReviewPreviewRow(number: "03", title: "下一步行动", text: review.action)
             }
             Divider().overlay(Palette.line)
             HStack(spacing: 6) {
@@ -125,7 +125,7 @@ struct ReviewHomeView: View {
                 Text("打开回顾")
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .medium))
             }
-            .font(.caption).foregroundStyle(Palette.sage)
+            .font(.caption).foregroundStyle(Palette.steel)
         }
         .paperPanel()
     }
@@ -144,7 +144,7 @@ struct ReviewHomeView: View {
                         Label("行动已完成", systemImage: "checkmark.circle")
                     }
                 }
-                .font(.system(size: 11)).foregroundStyle(Palette.sage)
+                .font(.system(size: 11)).foregroundStyle(Palette.steel)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
@@ -178,41 +178,41 @@ struct ReviewDetailView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 14) {
                         ReviewOriginPill(review: report)
-                        PageHeading(eyebrow: "A MOMENT TO REFLECT", title: "这几天的你",
+                        PageHeading(eyebrow: "REVIEW", title: "阶段检视",
                                     subtitle: DateText.range(report.periodStart, report.periodEnd))
                         Text(originExplanation(report))
                             .font(.caption).foregroundStyle(Palette.secondary).lineSpacing(4)
                     }
 
-                    reportSection(number: "01", title: "发生了什么", content: report.summary)
-                    reportSection(number: "02", title: "值得留意的变化", content: report.observation)
+                    reportSection(number: "01", title: "记录概况", content: report.summary)
+                    reportSection(number: "02", title: "变化线索", content: report.observation)
                     reportSection(number: "03", title: report.isLocal ? "整理方式与信息边界" : "待验证的解释",
                                   content: report.hypothesis)
 
                     evidenceSection(report)
 
                     VStack(alignment: .leading, spacing: 17) {
-                        SectionHeading(title: "接下来的一小步")
-                        Text("可以修改成你愿意尝试的行动。")
+                        SectionHeading(title: "下一步行动")
+                        Text("确定一项具体、可验证的行动。")
                             .font(.caption).foregroundStyle(Palette.secondary)
-                        TextField("写下一个具体的小行动", text: $actionDraft, axis: .vertical)
+                        TextField("记录下一步行动", text: $actionDraft, axis: .vertical)
                             .font(.body).foregroundStyle(Palette.ink)
                             .lineLimit(3...7).padding(14)
-                            .background(Palette.background, in: RoundedRectangle(cornerRadius: 14))
+                            .background(Palette.background, in: RoundedRectangle(cornerRadius: 10))
                             .focused($focusedField, equals: .action)
                             .accessibilityIdentifier("review.action")
-                        Toggle("这一步已经做了", isOn: $actionDone)
-                            .font(.subheadline).tint(Palette.sage)
+                        Toggle("行动已完成", isOn: $actionDone)
+                            .font(.subheadline).tint(Palette.steel)
                             .accessibilityIdentifier("review.actionDone")
                         Divider().overlay(Palette.line)
-                        Text("补充与不同看法")
+                        Text("补充与修正")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink)
-                        Text("补充遗漏的背景，或写下你不同意的地方。")
+                        Text("补充背景，标明不同意或尚待验证的判断。")
                             .font(.caption).foregroundStyle(Palette.secondary)
-                        TextField("我的补充……", text: $feedbackDraft, axis: .vertical)
+                        TextField("补充事实或修正判断", text: $feedbackDraft, axis: .vertical)
                             .font(.body).foregroundStyle(Palette.ink)
                             .lineLimit(3...8).padding(14)
-                            .background(Palette.background, in: RoundedRectangle(cornerRadius: 14))
+                            .background(Palette.background, in: RoundedRectangle(cornerRadius: 10))
                             .focused($focusedField, equals: .feedback)
                             .accessibilityIdentifier("review.feedback")
                         PrimaryButton(title: "保存行动与反馈", icon: "checkmark") {
@@ -221,19 +221,19 @@ struct ReviewDetailView: View {
                         .accessibilityIdentifier("review.save")
                         if didSave {
                             Label("已保存在本机", systemImage: "checkmark.circle.fill")
-                                .font(.caption).foregroundStyle(Palette.sage)
+                                .font(.caption).foregroundStyle(Palette.steel)
                                 .accessibilityIdentifier("review.saved")
                         }
                         if let error = store.storageError {
-                            Text(error).font(.caption).foregroundStyle(Palette.coral)
+                            Text(error).font(.caption).foregroundStyle(Palette.accent)
                         }
                     }
                     .paperPanel()
                 }
                 .padding(.horizontal, 22).padding(.top, 18).padding(.bottom, 32)
             } else {
-                EmptyState(icon: "doc.text", title: "这份回顾已不在这里",
-                           detail: "它可能已被删除。返回后可以整理一份新的本地回顾。")
+                EmptyState(icon: "doc.text", title: "回顾不存在",
+                           detail: "该回顾可能已删除。返回后可重新生成。")
                     .padding(.horizontal, 22)
             }
         }
@@ -257,7 +257,7 @@ struct ReviewDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Text(number).font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Palette.coral)
+                    .foregroundStyle(Palette.accent)
                 Text(title).font(.headline).foregroundStyle(Palette.ink)
             }
             Text(content).font(.body).foregroundStyle(Palette.ink)
@@ -269,14 +269,14 @@ struct ReviewDetailView: View {
     private func evidenceSection(_ report: ReviewReport) -> some View {
         VStack(alignment: .leading, spacing: 13) {
             HStack {
-                SectionHeading(title: "回到原始记录")
+                SectionHeading(title: "原始依据")
                 Text("\(report.entryIDs.filter { store.entry($0) != nil }.count) / \(report.entryIDs.count)")
                     .font(.caption).foregroundStyle(Palette.secondary)
                     .fixedSize()
                     .accessibilityLabel("\(report.entryIDs.count) 条依据中有 \(report.entryIDs.filter { store.entry($0) != nil }.count) 条可以查看")
             }
             if report.entryIDs.isEmpty {
-                Text("这次回顾还没有关联原文。留下一个真实片段后，可以重新整理。")
+                Text("本次回顾没有关联原文。添加记录后可重新生成。")
                     .font(.subheadline).foregroundStyle(Palette.secondary).lineSpacing(5)
                     .padding(.vertical, 10)
             } else {
@@ -295,7 +295,7 @@ struct ReviewDetailView: View {
                                 .foregroundStyle(Palette.secondary).padding(.top, 2)
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("原始记录已删除").font(.subheadline.weight(.medium))
-                                Text("暂时无法核对与这条记录相关的内容。")
+                                Text("无法核对该记录对应的内容。")
                                     .font(.caption).lineSpacing(3)
                             }
                             .foregroundStyle(Palette.secondary)
@@ -314,12 +314,12 @@ struct ReviewDetailView: View {
 
     private func originExplanation(_ report: ReviewReport) -> String {
         if report.isDemo {
-            return "以下是虚构的复盘示例，用来展示回看方式，不代表你的真实经历。"
+            return "以下为虚构的复盘示例，仅展示检视结构，不代表你的真实经历。"
         }
         if report.isLocal {
-            return "这是按日期和标签整理的本地回顾，尚未使用 AI 分析，不推断动机或长期状态。"
+            return "按日期和标签整理原始记录。AI 分析尚未接入，不推断动机或长期状态。"
         }
-        return "回顾依据列在下方，可以打开原文、补充背景或提出不同看法。"
+        return "原始依据列于下方，可核对原文、补充背景或修正判断。"
     }
 
     private func loadEditsIfNeeded() {
@@ -346,7 +346,7 @@ private struct ReviewOriginPill: View {
     var body: some View {
         TagPill(text: review.isDemo ? "复盘示例" : review.isLocal ? "本地回顾" : "复盘",
                 icon: review.isDemo ? "book.closed" : "doc.text",
-                color: review.isDemo ? Palette.coral : Palette.sage, filled: true)
+                color: review.isDemo ? Palette.accent : Palette.steel, filled: true)
     }
 }
 
@@ -357,7 +357,7 @@ private struct ReviewPreviewRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Text(number).font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(Palette.coral).padding(.top, 2)
+                .foregroundStyle(Palette.accent).padding(.top, 2)
             VStack(alignment: .leading, spacing: 7) {
                 Text(title).font(.system(size: 14, weight: .medium)).foregroundStyle(Palette.ink)
                 Text(text).font(.system(size: 13)).foregroundStyle(Palette.secondary)

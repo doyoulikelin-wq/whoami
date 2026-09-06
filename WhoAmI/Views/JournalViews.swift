@@ -35,7 +35,7 @@ struct JournalHomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 25) {
-                PageHeading(eyebrow: "MOMENTS", title: "日记", subtitle: "把普通的一天，也留在这里。")
+                PageHeading(eyebrow: "JOURNAL", title: "日记", subtitle: "按时间保留事件、状态与判断。")
 
                 VStack(spacing: 15) {
                     HStack(spacing: 12) {
@@ -56,15 +56,15 @@ struct JournalHomeView: View {
                         }
                         .padding(.horizontal, 15)
                         .frame(minHeight: 50)
-                        .background(Palette.cream, in: RoundedRectangle(cornerRadius: 15))
+                        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 10))
 
                         Button { showingDateFilter = true } label: {
                             Image(systemName: "calendar")
                                 .font(.system(size: 20, weight: .regular))
-                                .foregroundStyle(selectedDate == nil ? Palette.ink : Palette.coral)
+                                .foregroundStyle(selectedDate == nil ? Palette.ink : Palette.accent)
                                 .frame(width: 50, height: 50)
-                                .background(selectedDate == nil ? Palette.cream : Palette.coral.opacity(0.1),
-                                            in: RoundedRectangle(cornerRadius: 15))
+                                .background(selectedDate == nil ? Palette.surface : Palette.accent.opacity(0.1),
+                                            in: RoundedRectangle(cornerRadius: 10))
                         }
                         .accessibilityLabel("按日期筛选日记")
                         .accessibilityIdentifier("journal.dateFilter")
@@ -81,11 +81,11 @@ struct JournalHomeView: View {
                         HStack {
                             Label(DateText.format(selectedDate, "yyyy年M月d日"), systemImage: "calendar")
                                 .font(.subheadline)
-                                .foregroundStyle(Palette.coral)
+                                .foregroundStyle(Palette.accent)
                             Spacer()
                             Button("全部日期") { self.selectedDate = nil }
                                 .font(.subheadline)
-                                .foregroundStyle(Palette.sage)
+                                .foregroundStyle(Palette.steel)
                                 .frame(minHeight: 44)
                         }
                     }
@@ -93,22 +93,22 @@ struct JournalHomeView: View {
 
                 if store.entries.isEmpty {
                     VStack(spacing: 8) {
-                        EmptyState(icon: "book.closed", title: "从一个生活片段开始",
-                                   detail: "此刻发生了什么，脑海里正在想什么？\n几句话，就可以成为第一篇日记。")
-                        PrimaryButton(title: "写下第一条记录", icon: "square.and.pencil", action: onCompose)
+                        EmptyState(icon: "book.closed", title: "暂无记录",
+                                   detail: "记录事件、当时的反应与当前判断。")
+                        PrimaryButton(title: "新增记录", icon: "square.and.pencil", action: onCompose)
                     }
                 } else if filteredEntries.isEmpty {
                     VStack(spacing: 2) {
-                        EmptyState(icon: "magnifyingglass", title: "暂时没有匹配的记录",
-                                   detail: "试试其他关键词、日期或观察维度。")
+                        EmptyState(icon: "magnifyingglass", title: "无匹配记录",
+                                   detail: "调整关键词、日期或观察维度。")
                         Button("清除筛选") { clearFilters() }
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Palette.coral)
+                            .foregroundStyle(Palette.accent)
                             .frame(minHeight: 44)
                     }
                 } else {
                     HStack(alignment: .firstTextBaseline) {
-                        Text(hasFilters ? "找到 \(filteredEntries.count) 个片段" : "\(filteredEntries.count) 个生活片段")
+                        Text(hasFilters ? "找到 \(filteredEntries.count) 条记录" : "\(filteredEntries.count) 条记录")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Palette.secondary)
                         Spacer()
@@ -148,7 +148,7 @@ struct JournalHomeView: View {
                 .padding(.horizontal, 17)
                 .frame(minHeight: 44)
                 .foregroundStyle(isSelected ? Color.white : Palette.secondary)
-                .background(isSelected ? Palette.ink : Palette.cream, in: Capsule())
+                .background(isSelected ? Palette.ink : Palette.surface, in: RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(domain?.title ?? "全部维度")
@@ -163,7 +163,7 @@ struct JournalHomeView: View {
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 9) {
                     Text(DateText.day(day))
-                        .font(.system(size: 21, weight: .semibold, design: .rounded))
+                        .font(.system(size: 21, weight: .semibold))
                         .foregroundStyle(Palette.ink)
                     Text(DateText.format(day, "yyyy · EEEE"))
                         .font(.caption)
@@ -172,7 +172,7 @@ struct JournalHomeView: View {
                     Text("当日日记").font(.caption)
                     Image(systemName: "chevron.right").font(.system(size: 10, weight: .medium))
                 }
-                .foregroundStyle(Palette.sage)
+                .foregroundStyle(Palette.steel)
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
@@ -214,10 +214,10 @@ private struct JournalDateFilterSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    PageHeading(eyebrow: "A DAY IN YOUR LIFE", title: "回到某一天", subtitle: "选一个日期，看看当时的自己。")
+                    PageHeading(eyebrow: "SELECT DATE", title: "按日期查看", subtitle: "选择日期，查看对应记录。")
                     DatePicker("选择日期", selection: $date, displayedComponents: .date)
                         .datePickerStyle(.graphical)
-                        .tint(Palette.coral)
+                        .tint(Palette.accent)
                     PrimaryButton(title: "查看这一天", icon: "calendar") {
                         onSelect(date)
                         dismiss()
@@ -228,7 +228,7 @@ private struct JournalDateFilterSheet: View {
                     } label: {
                         Text("查看全部日期")
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Palette.sage)
+                            .foregroundStyle(Palette.steel)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                 }
@@ -267,7 +267,7 @@ struct EntryDetailView: View {
                                 }
                             }
                             Text(entry.title)
-                                .font(.system(size: 29, weight: .semibold, design: .rounded))
+                                .font(.system(size: 29, weight: .semibold))
                                 .foregroundStyle(Palette.ink)
                                 .lineSpacing(6)
                                 .textSelection(.enabled)
@@ -309,7 +309,7 @@ struct EntryDetailView: View {
                                     .foregroundStyle(Palette.secondary)
                                 Label(project.title, systemImage: "briefcase")
                                     .font(.subheadline)
-                                    .foregroundStyle(Palette.sage)
+                                    .foregroundStyle(Palette.steel)
                             }
                             .padding(.top, 9)
                         }
@@ -318,12 +318,12 @@ struct EntryDetailView: View {
                             DayJournalView(date: entry.createdAt)
                         } label: {
                             HStack {
-                                Label("回看这一天", systemImage: "calendar")
+                                Label("查看当日记录", systemImage: "calendar")
                                 Spacer()
                                 Image(systemName: "arrow.right")
                             }
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Palette.sage)
+                            .foregroundStyle(Palette.steel)
                             .frame(minHeight: 48)
                             .contentShape(Rectangle())
                         }
@@ -333,17 +333,17 @@ struct EntryDetailView: View {
                     .padding(24)
                 }
             } else {
-                EmptyState(icon: "doc", title: "这条记录已不在这里", detail: "记录可能已被删除。返回日记，查看其他片段。")
+                EmptyState(icon: "doc", title: "记录不存在", detail: "该记录可能已被删除。返回日记查看其他记录。")
             }
         }
-        .navigationTitle("生活片段")
+        .navigationTitle("原始记录")
         .navigationBarTitleDisplayMode(.inline)
         .pageBackground()
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if let entry = store.entry(entryID) {
                     Button("编辑") { editingEntry = entry }
-                        .foregroundStyle(Palette.coral)
+                        .foregroundStyle(Palette.accent)
                         .accessibilityIdentifier("journal.edit")
                     Menu {
                         Button("删除记录", role: .destructive) { showingDeleteConfirmation = true }
@@ -388,7 +388,7 @@ private struct EditJournalEntrySheet: View {
         NavigationStack {
             Form {
                 Section("标题") {
-                    TextField("给这段经历一个标题", text: $draft.title, axis: .vertical)
+                    TextField("输入记录标题", text: $draft.title, axis: .vertical)
                         .lineLimit(1...4)
                         .accessibilityIdentifier("journal.edit.title")
                 }
@@ -457,7 +457,7 @@ private struct EditJournalEntrySheet: View {
                     .accessibilityIdentifier("journal.edit.save")
                 }
             }
-            .tint(Palette.coral)
+            .tint(Palette.accent)
         }
     }
 }
@@ -475,7 +475,7 @@ struct DayJournalView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 25) {
                 PageHeading(eyebrow: "DAILY JOURNAL", title: DateText.format(date, "M月d日，EEEE"),
-                            subtitle: "\(DateText.format(date, "yyyy年")) · \(entries.count) 个生活片段")
+                            subtitle: "\(DateText.format(date, "yyyy年")) · \(entries.count) 条记录")
 
                 Picker("日记阅读方式", selection: $displayMode) {
                     Text("原始记录").tag(0)
@@ -485,7 +485,7 @@ struct DayJournalView: View {
                 .accessibilityIdentifier("journal.day.mode")
 
                 if entries.isEmpty {
-                    EmptyState(icon: "calendar", title: "这一天还没有记录", detail: "没有留下的部分，先保留为空白。")
+                    EmptyState(icon: "calendar", title: "当日无记录", detail: "没有记录的时段不作推断。")
                 } else if displayMode == 0 {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("最近记录在前 · 点击可查看和编辑原文")
@@ -507,7 +507,7 @@ struct DayJournalView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 12) {
                         TagPill(text: "本地整理", icon: "text.alignleft", filled: true)
-                        Text("按记录时间从早到晚排列，保留原文。尚未调用 AI，也未补写经历。")
+                        Text("按记录时间升序排列，保留原文；未进行 AI 分析或补写。")
                             .font(.subheadline)
                             .foregroundStyle(Palette.secondary)
                             .lineSpacing(5)
@@ -519,7 +519,7 @@ struct DayJournalView: View {
                                 HStack(spacing: 8) {
                                     Text(DateText.format(entry.createdAt, "HH:mm"))
                                         .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                                        .foregroundStyle(Palette.sage)
+                                        .foregroundStyle(Palette.steel)
                                     if let domain = entry.domain {
                                         Text("· \(domain.shortTitle)")
                                             .font(.caption)
@@ -544,7 +544,7 @@ struct DayJournalView: View {
                                 } label: {
                                     Label("查看原始记录", systemImage: "arrow.up.right")
                                         .font(.caption.weight(.medium))
-                                        .foregroundStyle(Palette.sage)
+                                        .foregroundStyle(Palette.steel)
                                         .frame(minHeight: 44)
                                 }
                                 .buttonStyle(.plain)
@@ -571,13 +571,13 @@ struct DomainDetailView: View {
 
     private var prompt: String {
         switch domain {
-        case .career: "正在推进什么，留下了什么成果，又卡在了哪里？"
-        case .finance: "看清拥有的资源、承担的压力和可以做出的选择。"
-        case .body: "睡眠、活动和精力，怎样影响着你的每一天？"
-        case .emotion: "留意情绪出现的情境，以及后来发生的变化。"
-        case .learning: "留下问题、理解和那些被新经历改变的判断。"
-        case .relationships: "如何表达需要、建立连接，也照顾自己的边界。"
-        case .life: "时间花在哪里，生活是否接近你真正重视的事？"
+        case .career: "核对项目投入、交付结果与未解决的障碍。"
+        case .finance: "记录存款、负债、收入与固定支出。"
+        case .body: "记录睡眠、活动量、疲劳程度与精力变化。"
+        case .emotion: "区分触发事件、主观感受、应对行为与后续结果。"
+        case .learning: "记录问题、论据、决策理由与判断修正。"
+        case .relationships: "记录互动、承诺、冲突、需求与边界。"
+        case .life: "比较时间分配、现实约束与个人目标。"
         }
     }
 
@@ -585,7 +585,7 @@ struct DomainDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 DomainIcon(domain: domain, size: 58)
-                PageHeading(eyebrow: "A PART OF YOU", title: domain.title, subtitle: prompt)
+                PageHeading(eyebrow: "OBSERVATION DOMAIN", title: domain.title, subtitle: prompt)
 
                 HStack(spacing: 12) {
                     TagPill(text: "\(entries.filter { !$0.isDemo }.count) 条真实记录", color: domain.color, filled: true)
@@ -598,7 +598,7 @@ struct DomainDetailView: View {
 
                 if !projects.isEmpty {
                     VStack(alignment: .leading, spacing: 18) {
-                        SectionHeading(title: "正在培养的事")
+                        SectionHeading(title: "关联项目")
                         ForEach(projects) { project in
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack {
@@ -618,7 +618,7 @@ struct DomainDetailView: View {
                                     .accessibilityLabel("\(project.title)的进度")
                                 Text("下一步 · \(project.nextStep)")
                                     .font(.caption)
-                                    .foregroundStyle(Palette.sage)
+                                    .foregroundStyle(Palette.steel)
                                     .lineSpacing(4)
                             }
                             if project.id != projects.last?.id {
@@ -629,9 +629,9 @@ struct DomainDetailView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    SectionHeading(title: "与此有关的片段")
+                    SectionHeading(title: "相关记录")
                     if entries.isEmpty {
-                        EmptyState(icon: domain.icon, title: "这一面，还等待被记录", detail: "记录时选择“\(domain.title)”，相关经历就会出现在这里。")
+                        EmptyState(icon: domain.icon, title: "该维度暂无记录", detail: "为记录标注“\(domain.title)”后，可在此集中查看。")
                     } else {
                         ForEach(entries) { entry in
                             NavigationLink {

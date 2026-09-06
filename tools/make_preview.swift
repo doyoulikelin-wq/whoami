@@ -6,7 +6,7 @@ let width = 1440, height = 880
 let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
                         bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-context.setFillColor(CGColor(red: 0.949, green: 0.945, blue: 0.929, alpha: 1))
+context.setFillColor(CGColor(red: 0.902, green: 0.918, blue: 0.933, alpha: 1))
 context.fill(CGRect(x: 0, y: 0, width: width, height: height))
 NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
@@ -16,10 +16,10 @@ func label(_ text: String, x: CGFloat, y: CGFloat, size: CGFloat, weight: NSFont
         .font: NSFont.systemFont(ofSize: size, weight: weight), .foregroundColor: color
     ])
 }
-let ink = NSColor(red: 0.16, green: 0.18, blue: 0.16, alpha: 1)
+let ink = NSColor(red: 0.094, green: 0.118, blue: 0.141, alpha: 1)
 label("WhoAmI", x: 44, y: 816, size: 32, weight: .semibold, color: ink)
-label("把今天的自己，好好记下来。", x: 228, y: 823, size: 16, weight: .regular,
-      color: NSColor(red: 0.45, green: 0.47, blue: 0.43, alpha: 1))
+label("记录事实。检视判断。", x: 228, y: 823, size: 16, weight: .regular,
+      color: NSColor(red: 0.384, green: 0.427, blue: 0.471, alpha: 1))
 let screens = [("today", "今天"), ("journal", "日记"), ("review", "复盘"), ("profile", "我的")]
 for (index, screen) in screens.enumerated() {
     let x = CGFloat(44 + index * 346)

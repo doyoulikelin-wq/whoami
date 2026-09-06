@@ -36,7 +36,7 @@ final class WhoAmIUITests: XCTestCase {
         selectTab("日记")
         reveal(text(containing: marker))
         text(containing: marker).tap()
-        XCTAssertTrue(app.navigationBars["生活片段"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["原始记录"].waitForExistence(timeout: 5))
         XCTAssertTrue(text(containing: "I made one small step on my own project today.").exists)
         capture("05_Record_reloaded_from_local_storage")
     }
@@ -55,7 +55,7 @@ final class WhoAmIUITests: XCTestCase {
 
         let resumeButton = app.buttons["compose-primary"]
         reveal(resumeButton)
-        XCTAssertTrue(resumeButton.label.contains("继续写草稿"))
+        XCTAssertTrue(resumeButton.label.contains("继续草稿"))
         capture("06_Draft_is_ready_to_resume")
         resumeButton.tap()
         XCTAssertTrue(composerInput.waitForExistence(timeout: 5))
@@ -80,12 +80,12 @@ final class WhoAmIUITests: XCTestCase {
     @MainActor
     func testFourTabsAndExampleReviewEvidenceAreNavigable() {
         launchFresh(empty: false)
-        XCTAssertTrue(app.staticTexts["今天，慢慢来。"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["观察自己"].waitForExistence(timeout: 5))
         capture("09_Today_examples")
 
         selectTab("日记")
         XCTAssertTrue(app.textFields["journal.search"].waitForExistence(timeout: 5))
-        reveal(text(containing: "先做出来，再慢慢变好"))
+        reveal(text(containing: "先验证，再扩展"))
         capture("10_Journal_examples")
 
         let profileTab = selectTab("我的")
@@ -97,26 +97,26 @@ final class WhoAmIUITests: XCTestCase {
         XCTAssertTrue(app.buttons["compose-primary"].isHittable)
 
         selectTab("复盘")
-        XCTAssertTrue(app.staticTexts["换个角度，看自己。"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["检视变化"].waitForExistence(timeout: 5))
         capture("12_Review_home")
 
         let latestReview = identified("review.latest")
         reveal(latestReview)
         latestReview.tap()
         XCTAssertTrue(app.navigationBars["复盘示例"].waitForExistence(timeout: 5))
-        XCTAssertTrue(text(containing: "以下是虚构的复盘示例").exists)
+        XCTAssertTrue(text(containing: "以下为虚构的复盘示例").exists)
         capture("13_Example_review_detail")
 
         let evidence = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "review.evidence.")).firstMatch
         reveal(evidence, maxSwipes: 12)
-        XCTAssertTrue(app.staticTexts["回到原始记录"].exists)
+        XCTAssertTrue(app.staticTexts["原始依据"].exists)
         capture("14_Review_original_evidence")
         evidence.tap()
 
-        XCTAssertTrue(app.navigationBars["生活片段"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["原始记录"].exists)
+        XCTAssertTrue(app.navigationBars["原始记录"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["原始记录"].firstMatch.exists)
         XCTAssertTrue(app.staticTexts["示例内容"].exists)
-        XCTAssertTrue(text(containing: "今天专注解决一个小问题").exists)
+        XCTAssertTrue(text(containing: "今天用一个可操作的页面验证记录流程。").exists)
         capture("15_Original_record_opened_from_review")
 
         selectTab("今天")
@@ -165,7 +165,7 @@ final class WhoAmIUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["删除这条记录？"].waitForExistence(timeout: 5))
         capture("17_Delete_confirmation")
         app.buttons["删除记录"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["从一个生活片段开始"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["暂无记录"].waitForExistence(timeout: 5))
         XCTAssertFalse(text(containing: savedTitle).exists)
         capture("18_Empty_journal_after_deletion")
     }
@@ -193,7 +193,7 @@ final class WhoAmIUITests: XCTestCase {
         XCTAssertEqual(evidence.count, 1, "Only the real entry should become review evidence.")
         XCTAssertTrue(evidence.firstMatch.label.contains(marker))
         XCTAssertTrue(text(containing: "One real event.").exists)
-        XCTAssertFalse(evidence.matching(NSPredicate(format: "label CONTAINS %@", "先做出来，再慢慢变好")).firstMatch.exists)
+        XCTAssertFalse(evidence.matching(NSPredicate(format: "label CONTAINS %@", "先验证，再扩展")).firstMatch.exists)
         capture("19_Local_review")
 
         let actionDone = app.switches["review.actionDone"]

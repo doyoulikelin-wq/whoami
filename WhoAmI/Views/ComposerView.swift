@@ -18,13 +18,13 @@ struct ComposerView: View {
                     Label("草稿自动保留", systemImage: "checkmark.circle")
                 }.font(.system(size: 11)).foregroundStyle(Palette.secondary)
 
-                Text("此刻，想记下什么？")
+                Text("记录事件与判断")
                     .font(.system(size: 25, weight: .semibold)).foregroundStyle(Palette.ink)
 
                 ZStack(alignment: .topLeading) {
                     if store.draftText.isEmpty {
-                        Text("发生的事、冒出的想法，\n或一个说不清的感受……")
-                            .font(.system(size: 17)).foregroundStyle(Palette.secondary.opacity(0.75))
+                        Text("发生了什么？你的反应是什么？\n保留具体的细节。")
+                            .font(.system(size: 17)).foregroundStyle(Palette.secondary)
                             .lineSpacing(8).padding(.top, 9).padding(.leading, 4)
                             .allowsHitTesting(false)
                     }
@@ -37,23 +37,23 @@ struct ComposerView: View {
 
                 HStack(spacing: 9) {
                     Button { focused = false; choosingContext = true } label: {
-                        TagPill(text: store.draftDomain?.shortTitle ?? "加个分类", icon: store.draftDomain?.icon ?? "tag", filled: store.draftDomain != nil)
+                        TagPill(text: store.draftDomain?.shortTitle ?? "分类", icon: store.draftDomain?.icon ?? "tag", filled: store.draftDomain != nil)
                             .frame(minHeight: 44)
                     }.buttonStyle(.plain).accessibilityIdentifier("choose-domain")
                     Button { focused = false; choosingMood = true } label: {
-                        TagPill(text: store.draftMood?.title ?? "记下心情", icon: store.draftMood?.icon ?? "leaf", filled: store.draftMood != nil)
+                        TagPill(text: store.draftMood?.title ?? "心情", icon: store.draftMood?.icon ?? "leaf", filled: store.draftMood != nil)
                             .frame(minHeight: 44)
                     }.buttonStyle(.plain)
                     Spacer(minLength: 0)
                 }
                 if let projectID = store.draftProjectID, let project = store.projects.first(where: { $0.id == projectID }) {
-                    Label(project.title, systemImage: "folder").font(.caption).foregroundStyle(Palette.sage)
+                    Label(project.title, systemImage: "folder").font(.caption).foregroundStyle(Palette.steel)
                 }
-                Text("分类和心情都可以以后再补。")
+                Text("分类、心情与关联项目均为选填。")
                     .font(.system(size: 11)).foregroundStyle(Palette.secondary)
             }
             .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 16)
-            .pageBackground().navigationTitle("记一下").navigationBarTitleDisplayMode(.inline)
+            .pageBackground().navigationTitle("新增记录").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("收起") { dismiss() }.foregroundStyle(Palette.secondary)
@@ -108,7 +108,7 @@ struct ComposerView: View {
                 ForEach(Mood.allCases) { mood in
                     Button { store.draftMood = mood; choosingMood = false } label: { selectionRow(mood.title, icon: mood.icon, selected: store.draftMood == mood) }
                 }
-            }.scrollContentBackground(.hidden).pageBackground().navigationTitle("此刻的心情").navigationBarTitleDisplayMode(.inline)
+            }.scrollContentBackground(.hidden).pageBackground().navigationTitle("当前心情").navigationBarTitleDisplayMode(.inline)
         }.presentationDetents([.medium])
     }
 
@@ -116,7 +116,7 @@ struct ComposerView: View {
         HStack {
             Label(title, systemImage: icon).foregroundStyle(Palette.ink)
             Spacer()
-            if selected { Image(systemName: "checkmark").foregroundStyle(Palette.coral) }
+            if selected { Image(systemName: "checkmark").foregroundStyle(Palette.accent) }
         }.frame(minHeight: 30).contentShape(Rectangle())
     }
 }

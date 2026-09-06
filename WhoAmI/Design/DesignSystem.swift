@@ -1,14 +1,14 @@
 import SwiftUI
 
 enum Palette {
-    static let background = Color(hex: 0xFAF9F6)
+    static let background = Color(hex: 0xF2F4F6)
     static let paper = Color(hex: 0xFFFFFF)
-    static let ink = Color(hex: 0x282D29)
-    static let secondary = Color(hex: 0x73776E)
-    static let coral = Color(hex: 0xC85535)
-    static let sage = Color(hex: 0x637E6C)
-    static let cream = Color(hex: 0xF3EFE6)
-    static let line = Color(hex: 0xE7E5DD)
+    static let ink = Color(hex: 0x181E24)
+    static let secondary = Color(hex: 0x626D78)
+    static let accent = Color(hex: 0x202932)
+    static let steel = Color(hex: 0x536574)
+    static let surface = Color(hex: 0xE8ECF0)
+    static let line = Color(hex: 0xD8DEE4)
 }
 
 extension Color {
@@ -41,8 +41,8 @@ struct PageHeading: View {
     let subtitle: String
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(eyebrow).font(.system(size: 11, weight: .semibold)).tracking(3).foregroundStyle(Palette.sage)
-            Text(title).font(.system(size: 30, weight: .semibold, design: .rounded)).foregroundStyle(Palette.ink)
+            Text(eyebrow).font(.system(size: 11, weight: .semibold)).tracking(3).foregroundStyle(Palette.steel)
+            Text(title).font(.system(size: 30, weight: .semibold)).foregroundStyle(Palette.ink)
             if !subtitle.isEmpty {
                 Text(subtitle).font(.subheadline).foregroundStyle(Palette.secondary).lineSpacing(4)
             }
@@ -61,7 +61,7 @@ struct SectionHeading: View {
             if let trailing {
                 Button(action: { action?() }) {
                     HStack(spacing: 4) { Text(trailing); Image(systemName: "chevron.right").font(.caption2) }
-                        .font(.subheadline).foregroundStyle(Palette.sage).frame(minHeight: 44)
+                        .font(.subheadline).foregroundStyle(Palette.steel).frame(minHeight: 44)
                 }.buttonStyle(.plain)
             }
         }
@@ -78,7 +78,7 @@ struct PrimaryButton: View {
                 .font(.system(size: 17, weight: .semibold))
                 .frame(maxWidth: .infinity).frame(minHeight: 54)
                 .foregroundStyle(.white)
-                .background(Palette.coral, in: RoundedRectangle(cornerRadius: 18))
+                .background(Palette.accent, in: RoundedRectangle(cornerRadius: 12))
         }.buttonStyle(.plain)
     }
 }
@@ -86,7 +86,7 @@ struct PrimaryButton: View {
 struct TagPill: View {
     let text: String
     var icon: String? = nil
-    var color = Palette.sage
+    var color = Palette.steel
     var filled = false
     var body: some View {
         HStack(spacing: 6) {
@@ -95,8 +95,8 @@ struct TagPill: View {
         }.font(.system(size: 12, weight: .medium))
             .foregroundStyle(color).padding(.horizontal, 11).padding(.vertical, 7)
             .background(filled ? color.opacity(0.1) : Palette.background,
-                        in: Capsule())
-            .overlay(Capsule().stroke(color.opacity(filled ? 0 : 0.19), lineWidth: 1))
+                        in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).stroke(color.opacity(filled ? 0 : 0.19), lineWidth: 1))
     }
 }
 
@@ -106,9 +106,9 @@ struct DomainIcon: View {
     var body: some View {
         Image(systemName: domain?.icon ?? "text.alignleft")
             .font(.system(size: size * 0.42, weight: .regular))
-            .foregroundStyle(domain?.color ?? Palette.sage)
+            .foregroundStyle(domain?.color ?? Palette.steel)
             .frame(width: size, height: size)
-            .background((domain?.color ?? Palette.sage).opacity(0.11), in: RoundedRectangle(cornerRadius: size * 0.31))
+            .background((domain?.color ?? Palette.steel).opacity(0.11), in: RoundedRectangle(cornerRadius: size * 0.22))
     }
 }
 
@@ -119,7 +119,7 @@ struct EntryRow: View {
             DomainIcon(domain: entry.domain)
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 6) {
-                    Text(entry.domain?.title ?? "生活片段").foregroundStyle(entry.domain?.color ?? Palette.sage)
+                    Text(entry.domain?.title ?? "未分类").foregroundStyle(entry.domain?.color ?? Palette.steel)
                     if entry.isDemo { Text("示例").foregroundStyle(Palette.secondary) }
                     Spacer(minLength: 4)
                     Text(Calendar.current.isDateInToday(entry.createdAt) ? DateText.format(entry.createdAt, "HH:mm") : DateText.day(entry.createdAt))
@@ -141,7 +141,7 @@ struct EmptyState: View {
     let detail: String
     var body: some View {
         VStack(spacing: 13) {
-            Image(systemName: icon).font(.system(size: 30, weight: .light)).foregroundStyle(Palette.sage).padding(.bottom, 5)
+            Image(systemName: icon).font(.system(size: 30, weight: .light)).foregroundStyle(Palette.steel).padding(.bottom, 5)
             Text(title).font(.headline).foregroundStyle(Palette.ink)
             Text(detail).font(.subheadline).foregroundStyle(Palette.secondary).multilineTextAlignment(.center).lineSpacing(5)
         }.frame(maxWidth: .infinity).padding(.vertical, 38).padding(.horizontal, 22)
@@ -154,6 +154,7 @@ extension View {
     }
     func paperPanel() -> some View {
         self.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.paper, in: RoundedRectangle(cornerRadius: 22))
+            .background(Palette.paper, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Palette.line.opacity(0.7), lineWidth: 0.5))
     }
 }
