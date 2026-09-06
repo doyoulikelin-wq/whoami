@@ -3,260 +3,191 @@ import XCTest
 final class WhoAmIUITests: XCTestCase {
     private var app: XCUIApplication!
 
+    private let domains: [(id: String, title: String)] = [
+        ("career", "事业与创造"), ("finance", "财务与资源"), ("body", "身体与精力"),
+        ("emotion", "情绪与应对"), ("learning", "学习与认知"),
+        ("relationships", "关系与边界"), ("life", "生活与自主")
+    ]
+
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
-    /// A first launch must reach recording directly and preserve the result across launches.
     @MainActor
-    func testRecordIsAvailableInTodayAndJournalAndPersistsAfterRelaunch() {
-        launchFresh(empty: true)
-        capture("01_First_launch_without_gate")
+    func testThreeTabsAndWheelProvideDirectRecordingWithoutOldComposer() {
+        launchFresh()
+        capture("30_Dashboard")
+        XCTAssertFalse(app.buttons["compose-primary"].exists)
+        XCTAssertFalse(app.buttons["compose-toolbar"].exists)
 
-        let marker = uniqueTitle("Persist")
-        let body = "\(marker)\nI made one small step on my own project today."
-        openComposer()
-        composerInput.typeText(body)
-        capture("02_Composer_with_real_record")
-        saveComposer()
+        selectTab("记录")
+        XCTAssertTrue(identified("record-view").waitForExistence(timeout: 5))
+        XCTAssertTrue(recordInput.exists)
+        XCTAssertTrue(app.buttons["record-voice"].exists)
+        XCTAssertFalse(app.buttons["record-save"].isEnabled)
+        selectDomain("career", title: "事业与创造")
+        capture("31_Wheel_record")
 
-        reveal(text(containing: marker))
-        XCTAssertTrue(text(containing: marker).isHittable, "The saved entry should be available on Today.")
-        capture("03_Today_with_saved_record")
+        let title = identified("record-domain-title")
+        let previousTitle = title.label
+        let wheel = identified("dimension-wheel")
+        reveal(wheel, swipingUp: false)
+        wheel.swipeLeft()
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", previousTitle), object: title)
+        XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 5), .completed,
+                       "A horizontal wheel gesture should change the selected domain.")
 
-        selectTab("日记")
-        XCTAssertTrue(app.textFields["journal.search"].waitForExistence(timeout: 5))
-        reveal(text(containing: marker))
-        capture("04_Journal_with_saved_record")
+        selectTab("对比")
+        XCTAssertTrue(identified("comparison-view").waitForExistence(timeout: 5))
+        XCTAssertEqual(comparisonRows.count, 0)
+        selectTab("总览")
+        XCTAssertTrue(identified("dashboard-view").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testSevenDomainDraftsPersistSeparatelyAndEachCanBeSaved() {
+        launchFresh()
+        selectTab("记录")
+        for domain in domains {
+            selectDomain(domain.id, title: domain.title)
+            XCTAssertEqual(recordInput.value as? String, "", "A new domain should have its own empty draft.")
+            enterRecord("Draft-\(domain.id)")
+        }
 
         app.terminate()
-        app.launchArguments = [] // Do not reset storage on the second launch.
+        app.launchArguments = []
         app.launch()
-        XCTAssertTrue(app.buttons["compose-primary"].waitForExistence(timeout: 10))
-        selectTab("日记")
-        reveal(text(containing: marker))
-        text(containing: marker).tap()
-        XCTAssertTrue(app.navigationBars["原始记录"].waitForExistence(timeout: 5))
-        XCTAssertTrue(text(containing: "I made one small step on my own project today.").exists)
-        capture("05_Record_reloaded_from_local_storage")
-    }
+        XCTAssertTrue(identified("dashboard-view").waitForExistence(timeout: 10))
+        selectTab("记录")
 
-    /// Dismissing the composer preserves its draft; saving consumes that draft once.
-    @MainActor
-    func testDismissedDraftCanBeResumedAndSaved() {
-        launchFresh(empty: true)
-        let marker = uniqueTitle("Draft")
-        let body = "\(marker)\nI want to come back to this unfinished thought."
+        for domain in domains {
+            selectDomain(domain.id, title: domain.title)
+            XCTAssertEqual(recordInput.value as? String, "Draft-\(domain.id)")
+            saveRecord()
+            let sector = app.buttons["wheel.domain.\(domain.id)"]
+            XCTAssertTrue(sector.label.contains("已记录"), "Each saved domain should have an accessible saved marker.")
+        }
 
-        openComposer()
-        composerInput.typeText(body)
-        app.buttons["dismiss-composer"].tap()
-        waitUntilGone(composerInput)
-
-        let resumeButton = app.buttons["compose-primary"]
-        reveal(resumeButton)
-        XCTAssertTrue(resumeButton.label.contains("继续草稿"))
-        capture("06_Draft_is_ready_to_resume")
-        resumeButton.tap()
-        XCTAssertTrue(composerInput.waitForExistence(timeout: 5))
-        XCTAssertEqual(composerInput.value as? String, body)
-        capture("07_Restored_draft")
-        saveComposer()
-
-        selectTab("日记")
-        reveal(text(containing: marker))
-        XCTAssertTrue(text(containing: marker).isHittable)
-        capture("08_Draft_saved_as_journal_entry")
-
-        app.buttons["compose-toolbar"].tap()
-        XCTAssertTrue(composerInput.waitForExistence(timeout: 5))
-        XCTAssertEqual(composerInput.value as? String, "")
-        XCTAssertFalse(app.buttons["save-entry"].isEnabled, "A saved draft must not be duplicated by saving an empty composer.")
-        app.buttons["dismiss-composer"].tap()
-        waitUntilGone(composerInput)
-    }
-
-    /// Exercise all four native tabs and follow a review's evidence to its original record.
-    @MainActor
-    func testFourTabsAndExampleReviewEvidenceAreNavigable() {
-        launchFresh(empty: false)
-        XCTAssertTrue(app.staticTexts["观察自己"].waitForExistence(timeout: 5))
-        capture("09_Today_examples")
-
-        selectTab("日记")
-        XCTAssertTrue(app.textFields["journal.search"].waitForExistence(timeout: 5))
-        reveal(text(containing: "先验证，再扩展"))
-        capture("10_Journal_examples")
-
-        let profileTab = selectTab("我的")
-        XCTAssertTrue(profileTab.isSelected, "The native profile tab should be selected.")
-        capture("11_Profile")
-
-        selectTab("今天")
-        reveal(app.buttons["compose-primary"], swipingUp: false)
-        XCTAssertTrue(app.buttons["compose-primary"].isHittable)
-
-        selectTab("复盘")
-        XCTAssertTrue(app.staticTexts["检视变化"].waitForExistence(timeout: 5))
-        capture("12_Review_home")
-
-        let latestReview = identified("review.latest")
-        reveal(latestReview)
-        latestReview.tap()
-        XCTAssertTrue(app.navigationBars["复盘示例"].waitForExistence(timeout: 5))
-        XCTAssertTrue(text(containing: "以下为虚构的复盘示例").exists)
-        capture("13_Example_review_detail")
-
-        let evidence = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "review.evidence.")).firstMatch
-        reveal(evidence, maxSwipes: 12)
-        XCTAssertTrue(app.staticTexts["原始依据"].exists)
-        capture("14_Review_original_evidence")
-        evidence.tap()
-
-        XCTAssertTrue(app.navigationBars["原始记录"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["原始记录"].firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["示例内容"].exists)
-        XCTAssertTrue(text(containing: "今天用一个可操作的页面验证记录流程。").exists)
-        capture("15_Original_record_opened_from_review")
-
-        selectTab("今天")
-        reveal(app.buttons["compose-primary"], swipingUp: false)
-    }
-
-    /// Editing is isolated until Save; committed edits and deletion change the real journal.
-    @MainActor
-    func testEditingCanBeCancelledThenSavedAndRecordCanBeDeleted() {
-        launchFresh(empty: true)
-        let suffix = String(UUID().uuidString.prefix(6))
-        let originalTitle = "Before-\(suffix)"
-        let savedTitle = "After-\(suffix)"
-        let originalBody = "\(originalTitle)\nOriginal source."
-        let savedBody = "Edited source remains local."
-
-        openComposer()
-        composerInput.typeText(originalBody)
-        saveComposer()
-        selectTab("日记")
-        reveal(text(containing: originalTitle))
-        text(containing: originalTitle).tap()
-        XCTAssertTrue(app.buttons["journal.edit"].waitForExistence(timeout: 5))
-
-        app.buttons["journal.edit"].tap()
-        let titleInput = identified("journal.edit.title")
-        XCTAssertTrue(titleInput.waitForExistence(timeout: 5))
-        replaceText(in: titleInput, with: "Discarded")
-        app.navigationBars["编辑记录"].buttons["取消"].tap()
-        waitUntilGone(titleInput)
-        XCTAssertTrue(app.staticTexts[originalTitle].exists)
-        XCTAssertFalse(app.staticTexts["Discarded"].exists)
-
-        app.buttons["journal.edit"].tap()
-        XCTAssertTrue(titleInput.waitForExistence(timeout: 5))
-        replaceText(in: titleInput, with: savedTitle)
-        replaceText(in: identified("journal.edit.body"), with: savedBody)
-        app.buttons["journal.edit.save"].tap()
-        waitUntilGone(titleInput)
-        XCTAssertTrue(app.staticTexts[savedTitle].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts[savedBody].exists)
-        capture("16_Saved_edits")
-
-        app.buttons["记录操作"].tap()
-        app.buttons["删除记录"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["删除这条记录？"].waitForExistence(timeout: 5))
-        capture("17_Delete_confirmation")
-        app.buttons["删除记录"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["暂无记录"].waitForExistence(timeout: 5))
-        XCTAssertFalse(text(containing: savedTitle).exists)
-        capture("18_Empty_journal_after_deletion")
-    }
-
-    /// A local review excludes examples and reloads committed feedback and action status.
-    @MainActor
-    func testLocalReviewUsesOnlyRealEntriesAndCanSaveFeedback() {
-        launchFresh(empty: false) // Keep the seeded examples alongside one real entry.
-        let marker = uniqueTitle("Real")
-        let feedback = "Useful next step."
-        openComposer()
-        composerInput.typeText("\(marker)\nOne real event.")
-        saveComposer()
-
-        selectTab("复盘")
-        let createReview = app.buttons["review.createLocal"]
-        reveal(createReview)
-        createReview.tap()
-        XCTAssertTrue(app.navigationBars["回顾详情"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["本地回顾"].exists)
-        XCTAssertTrue(text(containing: "留下了 1 条记录").exists)
-
-        let evidence = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "review.evidence."))
-        reveal(evidence.firstMatch)
-        XCTAssertEqual(evidence.count, 1, "Only the real entry should become review evidence.")
-        XCTAssertTrue(evidence.firstMatch.label.contains(marker))
-        XCTAssertTrue(text(containing: "One real event.").exists)
-        XCTAssertFalse(evidence.matching(NSPredicate(format: "label CONTAINS %@", "先验证，再扩展")).firstMatch.exists)
-        capture("19_Local_review")
-
-        let actionDone = app.switches["review.actionDone"]
-        reveal(actionDone)
-        XCTAssertEqual(actionDone.value as? String, "0")
-        actionDone.tap()
-        XCTAssertEqual(actionDone.value as? String, "1")
-
-        let feedbackInput = identified("review.feedback")
-        reveal(feedbackInput)
-        feedbackInput.tap()
-        feedbackInput.typeText(feedback)
-        app.buttons["完成"].firstMatch.tap()
-        let saveFeedback = app.buttons["review.save"]
-        reveal(saveFeedback)
-        saveFeedback.tap()
-        let savedIndicator = identified("review.saved")
-        XCTAssertTrue(savedIndicator.waitForExistence(timeout: 5))
-        reveal(savedIndicator)
-        capture("20_Feedback_saved")
-
-        app.navigationBars["回顾详情"].buttons.element(boundBy: 0).tap()
-        let latestReview = identified("review.latest")
-        reveal(latestReview)
-        latestReview.tap()
-        XCTAssertTrue(app.navigationBars["回顾详情"].waitForExistence(timeout: 5))
-        reveal(feedbackInput)
-        XCTAssertEqual(feedbackInput.value as? String, feedback)
-        XCTAssertEqual(actionDone.value as? String, "1")
-
-        selectTab("今天")
-        reveal(app.buttons["compose-primary"], swipingUp: false)
+        capture("38_All_dimensions_saved")
+        selectTab("对比")
+        XCTAssertTrue(identified("comparison-view").waitForExistence(timeout: 5))
+        for domain in domains.reversed() {
+            let row = comparisonRow(forDomain: domain.title)
+            reveal(row)
+            XCTAssertTrue(row.isHittable)
+        }
+        capture("36_Seven_domains_archived")
+        selectTab("总览")
     }
 
     @MainActor
-    private var composerInput: XCUIElement {
-        app.textViews["entry-body-input"]
+    func testEnergyGestureSavesThreeMoodBandsAndValuesStayInRange() throws {
+        launchFresh()
+        selectTab("记录")
+        let fixtures: [(domain: String, title: String, body: String, position: CGFloat, mood: String, range: ClosedRange<Int>)] = [
+            ("career", "事业与创造", "Energy-low", 0.15, "淡漠", 1...33),
+            ("finance", "财务与资源", "Energy-middle", 0.50, "平静", 34...66),
+            ("body", "身体与精力", "Energy-high", 0.85, "冲动", 67...99)
+        ]
+
+        for (index, fixture) in fixtures.enumerated() {
+            selectDomain(fixture.domain, title: fixture.title)
+            enterRecord(fixture.body)
+            let bar = identified("mood-energy-bar")
+            reveal(bar)
+            if index == 0 { capture("32_Energy_expanded") }
+            dragEnergyBar(bar, to: fixture.position)
+            let flame = identified("mood-flame-selection")
+            XCTAssertTrue(flame.waitForExistence(timeout: 5))
+            XCTAssertTrue(flame.label.contains(fixture.mood))
+            if index == 0 { capture("33_Flame_saved") }
+            saveRecord()
+            XCTAssertTrue(app.buttons["wheel.domain.\(fixture.domain)"].label.contains("已记录"))
+        }
+
+        selectTab("对比")
+        XCTAssertTrue(identified("comparison-view").waitForExistence(timeout: 5))
+        capture("34_Comparison")
+        for fixture in fixtures.reversed() {
+            let row = comparisonRow(forDomain: fixture.title)
+            reveal(row)
+            let recordID = String(row.identifier.dropFirst("comparison.entry.".count))
+            let rowLevel = identified("comparison.level.\(recordID)")
+            let intensity = try intensityValue(in: rowLevel.exists ? rowLevel : row)
+            XCTAssertTrue((1...99).contains(intensity))
+            XCTAssertTrue(fixture.range.contains(intensity), "The archived intensity should match the released section of the energy bar.")
+            XCTAssertTrue(row.label.contains(fixture.mood))
+            row.tap()
+            XCTAssertTrue(identified("comparison-detail").waitForExistence(timeout: 5))
+            XCTAssertEqual(try intensityValue(in: identified("comparison.detail.level")), intensity)
+            XCTAssertTrue(app.staticTexts[fixture.mood].exists)
+            XCTAssertTrue(identified("comparison.content").label.contains(fixture.body))
+            returnFromComparisonDetail()
+        }
+        selectTab("总览")
     }
 
     @MainActor
-    private func launchFresh(empty: Bool) {
+    func testEditedRecordsCreateSeparateReadonlySnapshotsWithoutDuplicateSave() {
+        launchFresh()
+        selectTab("记录")
+        selectDomain("career", title: "事业与创造")
+        enterRecord("Snapshot A")
+        saveRecord()
+        enterRecord("Snapshot B", replacing: true)
+        saveRecord()
+        // Saving unchanged content must not create a third historical snapshot.
+        saveRecord()
+        enterRecord("Uncommitted draft", replacing: true)
+
+        selectTab("对比")
+        XCTAssertTrue(identified("comparison-view").waitForExistence(timeout: 5))
+        XCTAssertEqual(comparisonRows.count, 2)
+        let newer = comparisonRows.element(boundBy: 0)
+        let older = comparisonRows.element(boundBy: 1)
+        XCTAssertNotEqual(newer.identifier, older.identifier)
+        reveal(older)
+        capture("37_Immutable_snapshots")
+        older.tap()
+
+        XCTAssertTrue(identified("comparison-detail").waitForExistence(timeout: 5))
+        let content = identified("comparison.content")
+        XCTAssertEqual(content.label, "Snapshot A")
+        XCTAssertFalse(app.textViews["record-body"].exists)
+        XCTAssertEqual(app.textFields.count, 0)
+        XCTAssertFalse(app.buttons["journal.edit"].exists)
+        XCTAssertFalse(app.buttons["编辑"].exists)
+        capture("35_Readonly_detail")
+
+        returnFromComparisonDetail()
+        comparisonRows.element(boundBy: 0).tap()
+        XCTAssertTrue(identified("comparison-detail").waitForExistence(timeout: 5))
+        XCTAssertEqual(identified("comparison.content").label, "Snapshot B")
+        selectTab("记录")
+        XCTAssertTrue(recordInput.waitForExistence(timeout: 5))
+        XCTAssertEqual(recordInput.value as? String, "Uncommitted draft")
+        selectTab("总览")
+    }
+
+    @MainActor
+    private var recordInput: XCUIElement { app.textViews["record-body"] }
+
+    @MainActor
+    private var comparisonRows: XCUIElementQuery {
+        app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "comparison.entry."))
+    }
+
+    @MainActor
+    private func comparisonRow(forDomain title: String) -> XCUIElement {
+        comparisonRows.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+    }
+
+    @MainActor
+    private func launchFresh() {
         app = XCUIApplication()
-        app.launchArguments = ["--uitesting-reset"]
-        if empty { app.launchArguments.append("--uitesting-empty") }
+        app.launchArguments = ["--uitesting-reset", "--uitesting-empty"]
         app.launch()
-        XCTAssertTrue(app.buttons["compose-primary"].waitForExistence(timeout: 10))
-    }
-
-    @MainActor
-    private func openComposer() {
-        let button = app.buttons["compose-primary"]
-        reveal(button)
-        button.tap()
-        XCTAssertTrue(composerInput.waitForExistence(timeout: 5))
-        composerInput.tap()
-    }
-
-    @MainActor
-    private func saveComposer() {
-        let saveButton = app.buttons["save-entry"]
-        XCTAssertTrue(saveButton.isEnabled)
-        saveButton.tap()
-        waitUntilGone(composerInput)
+        XCTAssertTrue(identified("dashboard-view").waitForExistence(timeout: 10))
     }
 
     @MainActor
@@ -265,30 +196,112 @@ final class WhoAmIUITests: XCTestCase {
     }
 
     @MainActor
-    private func text(containing value: String) -> XCUIElement {
-        app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", value)).firstMatch
+    private func selectDomain(_ id: String, title: String) {
+        dismissKeyboard()
+        let wheel = identified("dimension-wheel")
+        reveal(wheel, swipingUp: false)
+        let sector = app.buttons["wheel.domain.\(id)"]
+        XCTAssertTrue(sector.waitForExistence(timeout: 5))
+        sector.tap()
+        let heading = identified("record-domain-title")
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", title), object: heading)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed)
     }
 
-    /// Prefer UITabBar descendants; the global button fallback also handles floating tab bars.
     @MainActor
-    @discardableResult
-    private func selectTab(_ label: String, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+    private func enterRecord(_ text: String, replacing: Bool = false) {
+        reveal(recordInput)
+        if replacing {
+            let previous = recordInput.value as? String ?? ""
+            recordInput.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.75)).tap()
+            recordInput.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: previous.count))
+        } else {
+            recordInput.tap()
+        }
+        recordInput.typeText(text)
+        XCTAssertEqual(recordInput.value as? String, text)
+        if text == "Snapshot A" { capture("39_Record_keyboard") }
+        dismissKeyboard()
+    }
+
+    @MainActor
+    private func dismissKeyboard() {
+        guard app.keyboards.firstMatch.exists else { return }
+        let done = app.buttons["完成"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 3))
+        done.tap()
+    }
+
+    @MainActor
+    private func dragEnergyBar(_ bar: XCUIElement, to position: CGFloat) {
+        let start = bar.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.7))
+        let end = bar.coordinate(withNormalizedOffset: CGVector(dx: position, dy: 0.7))
+        start.press(forDuration: 0.2, thenDragTo: end)
+        waitUntilGone(bar)
+    }
+
+    @MainActor
+    private func saveRecord() {
+        dismissKeyboard()
+        // A new record requires an explicit mood choice. Existing saved drafts already
+        // contain a committed intensity and can be saved again without changing it.
+        let bar = identified("mood-energy-bar")
+        if bar.exists {
+            reveal(bar)
+            dragEnergyBar(bar, to: 0.5)
+        }
+        let save = app.buttons["record-save"]
+        reveal(save)
+        XCTAssertTrue(save.isEnabled)
+        save.tap()
+        XCTAssertTrue(identified("record-saved").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func returnFromComparisonDetail() {
+        app.navigationBars.firstMatch.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(identified("comparison-view").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func intensityValue(in element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) throws -> Int {
+        XCTAssertTrue(element.waitForExistence(timeout: 5), file: file, line: line)
+        var candidates = [element.label]
+        if let value = element.value as? String,
+           !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            candidates.append(value)
+        }
+        // SwiftUI may expose a row's child Text with an empty value or label even
+        // though the NavigationLink's combined label contains the visible intensity.
+        let levelPrefix = "comparison.level."
+        if element.identifier.hasPrefix(levelPrefix) {
+            let recordID = String(element.identifier.dropFirst(levelPrefix.count))
+            let row = app.buttons["comparison.entry.\(recordID)"]
+            if row.exists { candidates.insert(row.label, at: 0) }
+        }
+        let text = candidates.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }.joined(separator: " ")
+        let values = text.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+        return try XCTUnwrap(values.first, "Intensity must expose a numeric accessibility value or label. Received: \(text)", file: file, line: line)
+    }
+
+    /// Handles both conventional UITabBar descendants and iOS floating tab bar buttons.
+    @MainActor
+    private func selectTab(_ label: String, file: StaticString = #filePath, line: UInt = #line) {
+        dismissKeyboard()
         let tabBarButton = app.tabBars.buttons[label].firstMatch
         let fallbackButton = app.buttons[label].firstMatch
         for _ in 0..<4 {
             let button = tabBarButton.exists ? tabBarButton : fallbackButton
             if button.exists && button.isHittable {
                 button.tap()
-                return button
+                return
             }
-            // A downward content gesture expands the iOS floating tab bar after scrolling.
             app.swipeDown()
         }
         XCTFail("Could not reach the \(label) tab.", file: file, line: line)
-        return fallbackButton
     }
 
-    /// Use the outer scroll view and stay away from the floating tab bar while scrolling.
     @MainActor
     private func reveal(_ element: XCUIElement, maxSwipes: Int = 9, swipingUp: Bool = true,
                         file: StaticString = #filePath, line: UInt = #line) {
@@ -296,8 +309,9 @@ final class WhoAmIUITests: XCTestCase {
             if element.exists && element.isHittable { return }
             let scrollView = app.scrollViews.firstMatch
             let surface = scrollView.exists ? scrollView : app!
-            let start = surface.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: swipingUp ? 0.75 : 0.3))
-            let end = surface.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: swipingUp ? 0.3 : 0.75))
+            // The edge avoids dragging the central wheel or the mood control.
+            let start = surface.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: swipingUp ? 0.77 : 0.28))
+            let end = surface.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: swipingUp ? 0.28 : 0.77))
             start.press(forDuration: 0.05, thenDragTo: end)
         }
         capture("Unable_to_reveal_element")
@@ -305,25 +319,9 @@ final class WhoAmIUITests: XCTestCase {
     }
 
     @MainActor
-    private func replaceText(in element: XCUIElement, with replacement: String) {
-        XCTAssertTrue(element.waitForExistence(timeout: 5))
-        let previous = element.value as? String ?? ""
-        // These fixtures fit in a few short lines. Tapping their lower trailing edge puts
-        // the caret after the content without depending on localized edit-menu labels.
-        element.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.9)).tap()
-        element.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: previous.count))
-        element.typeText(replacement)
-        XCTAssertEqual(element.value as? String, replacement)
-    }
-
-    @MainActor
     private func waitUntilGone(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed, file: file, line: line)
-    }
-
-    private func uniqueTitle(_ prefix: String) -> String {
-        "\(prefix)-\(UUID().uuidString.prefix(8))"
     }
 
     @MainActor

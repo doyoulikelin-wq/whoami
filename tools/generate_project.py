@@ -63,9 +63,11 @@ app_settings = {
     "INFOPLIST_KEY_UILaunchScreen_Generation": "YES", "INFOPLIST_KEY_UIApplicationSceneManifest_Generation": "YES",
     "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait",
     "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.lifestyle",
+    "INFOPLIST_KEY_NSMicrophoneUsageDescription": "点击语音记录后，使用麦克风将你的表达转为文字。",
+    "INFOPLIST_KEY_NSSpeechRecognitionUsageDescription": "将语音转换为可编辑的记录。部分设备可能使用 Apple 语音识别服务。",
     "TARGETED_DEVICE_FAMILY": "1", "CODE_SIGN_STYLE": "Automatic",
     "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon", "CURRENT_PROJECT_VERSION": "1",
-    "MARKETING_VERSION": "0.1.0", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks",
+    "MARKETING_VERSION": "0.3.0", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks",
     "SWIFT_EMIT_LOC_STRINGS": "YES", "ENABLE_PREVIEWS": "YES",
 }
 test_settings = {

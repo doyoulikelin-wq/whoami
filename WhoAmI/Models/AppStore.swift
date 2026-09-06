@@ -82,6 +82,8 @@ struct JournalEntry: Identifiable, Codable, Equatable {
     var mood: Mood?
     var projectID: UUID? = nil
     var isDemo = false
+    var moodIntensity: Int? = nil
+    var updatedAt: Date? = nil
 }
 
 struct GrowthProject: Identifiable, Codable {
@@ -130,6 +132,8 @@ private struct StoreSnapshot: Codable {
     var draftDomain: LifeDomain?
     var draftMood: Mood?
     var draftProjectID: UUID?
+    var dimensionDrafts: [String: DimensionDraft]?
+    var recordingDomain: LifeDomain?
 }
 
 @MainActor
@@ -146,6 +150,8 @@ final class AppStore: ObservableObject {
     @Published var draftDomain: LifeDomain? { didSet { persist() } }
     @Published var draftMood: Mood? { didSet { persist() } }
     @Published var draftProjectID: UUID? { didSet { persist() } }
+    @Published var dimensionDrafts: [String: DimensionDraft] = [:] { didSet { persist() } }
+    @Published var recordingDomain: LifeDomain = .career { didSet { persist() } }
     @Published var storageError: String?
     private var ready = false
     private let fileURL: URL
@@ -166,6 +172,8 @@ final class AppStore: ObservableObject {
                 reviewInterval = saved.reviewInterval; focus = saved.focus
                 draftText = saved.draftText; draftDomain = saved.draftDomain
                 draftMood = saved.draftMood; draftProjectID = saved.draftProjectID
+                dimensionDrafts = saved.dimensionDrafts ?? [:]
+                recordingDomain = saved.recordingDomain ?? .career
             } catch {
                 storageError = "暂时无法读取本地记录。原文件已保留，请先导出备份。"
                 return
@@ -193,6 +201,56 @@ final class AppStore: ObservableObject {
                                  domain: draftDomain, mood: draftMood, projectID: draftProjectID)
         entries.append(entry)
         draftText = ""; draftDomain = nil; draftMood = nil; draftProjectID = nil
+        return entry
+    }
+
+    func latestRecord(for domain: LifeDomain) -> JournalEntry? {
+        realEntries.first { $0.domain == domain }
+    }
+
+    func dimensionDraft(for domain: LifeDomain) -> DimensionDraft {
+        if let draft = dimensionDrafts[domain.rawValue] { return draft }
+        // Retain unfinished content from the previous single-draft editor.
+        if (draftDomain == domain || (draftDomain == nil && domain == .career)) && !draftText.isEmpty {
+            return DimensionDraft(body: draftText)
+        }
+        if let saved = latestRecord(for: domain) {
+            return DimensionDraft(body: saved.body, intensity: saved.moodIntensity ?? 50,
+                                  hasChosenIntensity: saved.moodIntensity != nil)
+        }
+        return DimensionDraft()
+    }
+
+    func setDimensionDraft(_ draft: DimensionDraft, for domain: LifeDomain) {
+        dimensionDrafts[domain.rawValue] = DimensionDraft(body: draft.body,
+            intensity: min(99, max(1, draft.intensity)), hasChosenIntensity: draft.hasChosenIntensity)
+    }
+
+    var savedDimensionLevels: [LifeDomain: Int] {
+        Dictionary(uniqueKeysWithValues: LifeDomain.allCases.compactMap { domain in
+            guard let level = latestRecord(for: domain)?.moodIntensity else { return nil }
+            return (domain, min(99, max(1, level)))
+        })
+    }
+
+    @discardableResult
+    func saveDimension(_ domain: LifeDomain) -> JournalEntry? {
+        let draft = dimensionDraft(for: domain)
+        let body = draft.body.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !body.isEmpty, draft.hasChosenIntensity else { return nil }
+        let level = min(99, max(1, draft.intensity))
+        let latest = latestRecord(for: domain)
+        // Repeated taps without edits reuse the existing snapshot.
+        if let latest, latest.body == body, latest.moodIntensity == level {
+            setDimensionDraft(DimensionDraft(body: body, intensity: level, hasChosenIntensity: true), for: domain)
+            return latest
+        }
+        let firstLine = body.components(separatedBy: .newlines).first ?? body
+        let entry = JournalEntry(title: String(firstLine.prefix(26)), body: body, createdAt: .now,
+                                 domain: domain, mood: nil, moodIntensity: level, updatedAt: .now)
+        entries.append(entry)
+        setDimensionDraft(DimensionDraft(body: body, intensity: level, hasChosenIntensity: true), for: domain)
+        if draftDomain == domain || (draftDomain == nil && domain == .career) { draftText = ""; draftDomain = nil; draftMood = nil; draftProjectID = nil }
         return entry
     }
 
@@ -240,13 +298,14 @@ final class AppStore: ObservableObject {
                     domain: .learning, progress: 0.6, nextStep: "完成一章并列出论据", isDemo: true)])
         questions.append(contentsOf: [OpenQuestion(title: "我的时间投入是否对应当前目标？", note: "比较计划用时、实际用时与产生的结果。", isDemo: true),
                      OpenQuestion(title: "继续准备解决了哪个具体障碍？", note: "记录每次修改的理由，区分必要准备与延迟交付。", isDemo: true)])
-        let examples = [
+        var examples = [
             JournalEntry(title: "先验证，再扩展", body: "今天用一个可操作的页面验证记录流程。我完成了输入、保存和重新打开三个步骤，发现日期筛选还没有验证。\n\n页面能运行让我暂时停止扩展功能，但这不等于流程已通过测试。下一步检查空记录和重启后的数据。", createdAt: day(0, 9), domain: .learning, mood: .focused, projectID: project.id, isDemo: true),
             JournalEntry(title: "交付标准仍不明确", body: "今天用 45 分钟修改了三版页面，但没有写出验收条件。遇到布局问题后，我感到焦躁，继续调整了间距和颜色。\n\n这些修改没有解决交付范围的问题。我需要先列出本次必须完成的功能。", createdAt: day(-1, 19), domain: .career, mood: .calm, projectID: project.id, isDemo: true),
             JournalEntry(title: "散步前后的状态", body: "下午连续坐了两个小时，我开始反复切换窗口，注意力难以维持。傍晚步行 30 分钟后，主观疲劳感下降。\n\n返回桌面后，我列出了原问题的两个处理方向。一次记录不足以判断变化是否由散步引起。", createdAt: day(-1, 17), domain: .body, mood: .happy, isDemo: true),
             JournalEntry(title: "四十分钟的实际投入", body: "我关闭消息提醒，安排了 40 分钟阅读。实际阅读约 25 分钟，其余时间用于查资料。\n\n原计划完成一章，最后没有完成。我记下了两个需要核实的问题，下一次要把查阅时间单独计算。", createdAt: day(-2, 10), domain: .life, mood: .calm, isDemo: true),
             JournalEntry(title: "本月资金与固定支出", body: "我核对了本月账目。示例存款为 28,600 元，每月固定支出为 5,400 元，未到账收入没有计入存款。\n\n看到支出总额后，我感到紧张。目前还没有决定削减哪一项，需要先区分必要支出和可调整支出。", createdAt: day(-3, 20), domain: .finance, mood: .calm, isDemo: true)
         ]
+        for index in examples.indices { examples[index].moodIntensity = [52, 81, 43, 26, 69][index] }
         entries.append(contentsOf: examples)
         reviews.append(ReviewReport(createdAt: .now, periodStart: day(-2, 0), periodEnd: .now,
             entryIDs: Array(examples.prefix(4).map(\.id)),
@@ -283,7 +342,8 @@ final class AppStore: ObservableObject {
     private var snapshot: StoreSnapshot {
         StoreSnapshot(entries: entries, projects: projects, questions: questions, reviews: reviews,
                       mood: mood, energy: energy, reviewInterval: reviewInterval, focus: focus,
-                      draftText: draftText, draftDomain: draftDomain, draftMood: draftMood, draftProjectID: draftProjectID)
+                      draftText: draftText, draftDomain: draftDomain, draftMood: draftMood, draftProjectID: draftProjectID,
+                      dimensionDrafts: dimensionDrafts, recordingDomain: recordingDomain)
     }
     private func persist() {
         guard ready else { return }
