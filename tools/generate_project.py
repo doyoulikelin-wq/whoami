@@ -24,7 +24,8 @@ def refs(items):
 
 source_paths = sorted((ROOT / "WhoAmI").rglob("*.swift"))
 test_paths = sorted((ROOT / "WhoAmIUITests").glob("*.swift"))
-for source in source_paths + test_paths:
+unit_paths = sorted((ROOT / "WhoAmITests").glob("*.swift"))
+for source in source_paths + test_paths + unit_paths:
     relative = source.relative_to(ROOT).as_posix()
     obj(relative, f"isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {quoted(relative)}; sourceTree = SOURCE_ROOT;")
     obj("build:" + relative, f"isa = PBXBuildFile; fileRef = {uid(relative)};")
@@ -34,12 +35,14 @@ obj(asset, f"isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; pa
 obj("build:" + asset, f"isa = PBXBuildFile; fileRef = {uid(asset)};")
 obj("app-product", 'isa = PBXFileReference; explicitFileType = wrapper.application; path = WhoAmI.app; sourceTree = BUILT_PRODUCTS_DIR;')
 obj("test-product", 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = WhoAmIUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
-obj("products", f'isa = PBXGroup; children = {refs(["app-product", "test-product"])} name = Products; sourceTree = "<group>";')
+obj("unit-product", 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = WhoAmITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
+obj("products", f'isa = PBXGroup; children = {refs(["app-product", "test-product", "unit-product"])} name = Products; sourceTree = "<group>";')
 obj("source-group", f'isa = PBXGroup; children = {refs([p.relative_to(ROOT).as_posix() for p in source_paths] + [asset])} name = WhoAmI; sourceTree = "<group>";')
 obj("test-group", f'isa = PBXGroup; children = {refs([p.relative_to(ROOT).as_posix() for p in test_paths])} name = WhoAmIUITests; sourceTree = "<group>";')
-obj("main-group", f'isa = PBXGroup; children = {refs(["source-group", "test-group", "products"])} sourceTree = "<group>";')
+obj("unit-group", f'isa = PBXGroup; children = {refs([p.relative_to(ROOT).as_posix() for p in unit_paths])} name = WhoAmITests; sourceTree = "<group>";')
+obj("main-group", f'isa = PBXGroup; children = {refs(["source-group", "test-group", "unit-group", "products"])} sourceTree = "<group>";')
 
-for prefix, paths in [("app", source_paths), ("test", test_paths)]:
+for prefix, paths in [("app", source_paths), ("test", test_paths), ("unit", unit_paths)]:
     obj(prefix + "-sources", "isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = " +
         refs(["build:" + p.relative_to(ROOT).as_posix() for p in paths]) + " runOnlyForDeploymentPostprocessing = 0;")
     obj(prefix + "-frameworks", "isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;")
@@ -50,6 +53,10 @@ obj("test-proxy", f"isa = PBXContainerItemProxy; containerPortal = {uid('project
 obj("test-dependency", f"isa = PBXTargetDependency; target = {uid('app-target')}; targetProxy = {uid('test-proxy')};")
 obj("app-target", f"isa = PBXNativeTarget; buildConfigurationList = {uid('app-configs')}; buildPhases = {refs(['app-sources', 'app-frameworks', 'app-resources'])} buildRules = (); dependencies = (); name = WhoAmI; productName = WhoAmI; productReference = {uid('app-product')}; productType = \"com.apple.product-type.application\";")
 obj("test-target", f"isa = PBXNativeTarget; buildConfigurationList = {uid('test-configs')}; buildPhases = {refs(['test-sources', 'test-frameworks', 'test-resources'])} buildRules = (); dependencies = {refs(['test-dependency'])} name = WhoAmIUITests; productName = WhoAmIUITests; productReference = {uid('test-product')}; productType = \"com.apple.product-type.bundle.ui-testing\";")
+
+obj("unit-proxy", f"isa = PBXContainerItemProxy; containerPortal = {uid('project')}; proxyType = 1; remoteGlobalIDString = {uid('app-target')}; remoteInfo = WhoAmI;")
+obj("unit-dependency", f"isa = PBXTargetDependency; target = {uid('app-target')}; targetProxy = {uid('unit-proxy')};")
+obj("unit-target", f'isa = PBXNativeTarget; buildConfigurationList = {uid("unit-configs")}; buildPhases = {refs(["unit-sources", "unit-frameworks", "unit-resources"])} buildRules = (); dependencies = {refs(["unit-dependency"])} name = WhoAmITests; productName = WhoAmITests; productReference = {uid("unit-product")}; productType = "com.apple.product-type.bundle.unit-test";')
 
 common = {
     "SDKROOT": "iphoneos", "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
@@ -66,8 +73,8 @@ app_settings = {
     "INFOPLIST_KEY_NSMicrophoneUsageDescription": "点击语音记录后，使用麦克风将你的表达转为文字。",
     "INFOPLIST_KEY_NSSpeechRecognitionUsageDescription": "将语音转换为可编辑的记录。部分设备可能使用 Apple 语音识别服务。",
     "TARGETED_DEVICE_FAMILY": "1", "CODE_SIGN_STYLE": "Automatic",
-    "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon", "CURRENT_PROJECT_VERSION": "1",
-    "MARKETING_VERSION": "0.3.0", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks",
+    "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon", "CURRENT_PROJECT_VERSION": "2",
+    "MARKETING_VERSION": "0.3.1", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks",
     "SWIFT_EMIT_LOC_STRINGS": "YES", "ENABLE_PREVIEWS": "YES",
 }
 test_settings = {
@@ -75,7 +82,13 @@ test_settings = {
     "GENERATE_INFOPLIST_FILE": "YES", "TARGETED_DEVICE_FAMILY": "1", "CODE_SIGN_STYLE": "Automatic",
     "TEST_TARGET_NAME": "WhoAmI", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks @loader_path/Frameworks",
 }
-for group, settings in [("project", common), ("app", app_settings), ("test", test_settings)]:
+unit_settings = {
+    "PRODUCT_BUNDLE_IDENTIFIER": "com.doyoulikelin.whoami.tests", "PRODUCT_NAME": "$(TARGET_NAME)",
+    "GENERATE_INFOPLIST_FILE": "YES", "TARGETED_DEVICE_FAMILY": "1", "CODE_SIGN_STYLE": "Automatic",
+    "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/WhoAmI.app/WhoAmI", "BUNDLE_LOADER": "$(TEST_HOST)",
+    "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks @loader_path/Frameworks",
+}
+for group, settings in [("project", common), ("app", app_settings), ("test", test_settings), ("unit", unit_settings)]:
     for config in ["Debug", "Release"]:
         values = dict(settings)
         if group == "project":
@@ -87,7 +100,7 @@ for group, settings in [("project", common), ("app", app_settings), ("test", tes
         obj(group + config, f"isa = XCBuildConfiguration; buildSettings = {{ {fields} }}; name = {config};")
     obj(group + "-configs", f"isa = XCConfigurationList; buildConfigurations = {refs([group+'Debug', group+'Release'])} defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;")
 
-obj("project", f"isa = PBXProject; attributes = {{ BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 2630; TargetAttributes = {{ {uid('app-target')} = {{ CreatedOnToolsVersion = 26.3; }}; {uid('test-target')} = {{ CreatedOnToolsVersion = 26.3; TestTargetID = {uid('app-target')}; }}; }}; }}; buildConfigurationList = {uid('project-configs')}; compatibilityVersion = \"Xcode 14.0\"; developmentRegion = zh-Hans; hasScannedForEncodings = 0; knownRegions = (en, Base, \"zh-Hans\"); mainGroup = {uid('main-group')}; productRefGroup = {uid('products')}; projectDirPath = \"\"; projectRoot = \"\"; targets = {refs(['app-target', 'test-target'])}")
+obj("project", f"isa = PBXProject; attributes = {{ BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 2630; TargetAttributes = {{ {uid('app-target')} = {{ CreatedOnToolsVersion = 26.3; }}; {uid('test-target')} = {{ CreatedOnToolsVersion = 26.3; TestTargetID = {uid('app-target')}; }}; {uid('unit-target')} = {{ CreatedOnToolsVersion = 26.3; TestTargetID = {uid('app-target')}; }}; }}; }}; buildConfigurationList = {uid('project-configs')}; compatibilityVersion = \"Xcode 14.0\"; developmentRegion = zh-Hans; hasScannedForEncodings = 0; knownRegions = (en, Base, \"zh-Hans\"); mainGroup = {uid('main-group')}; productRefGroup = {uid('products')}; projectDirPath = \"\"; projectRoot = \"\"; targets = {refs(['app-target', 'test-target', 'unit-target'])}")
 (PROJECT / "project.pbxproj").write_text("// !$*UTF8*$!\n{\n\tarchiveVersion = 1;\n\tclasses = {};\n\tobjectVersion = 56;\n\tobjects = {\n" + "\n".join(objects) + f"\n\t}};\n\trootObject = {uid('project')};\n}}\n")
 schemes = PROJECT / "xcshareddata" / "xcschemes"
 schemes.mkdir(parents=True, exist_ok=True)
@@ -95,16 +108,18 @@ def reference(target, name):
     return f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{uid(target)}" BuildableName="{name}" BlueprintName="{name.split(".")[0]}" ReferencedContainer="container:WhoAmI.xcodeproj"/>'
 app_ref = reference("app-target", "WhoAmI.app")
 test_ref = reference("test-target", "WhoAmIUITests.xctest")
+unit_ref = reference("unit-target", "WhoAmITests.xctest")
 (schemes / "WhoAmI.xcscheme").write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="2630" version="1.3">
  <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries>
   <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">{app_ref}</BuildActionEntry>
   <BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">{test_ref}</BuildActionEntry>
+  <BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">{unit_ref}</BuildActionEntry>
  </BuildActionEntries></BuildAction>
- <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables><TestableReference skipped="NO">{test_ref}</TestableReference></Testables></TestAction>
+ <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables><TestableReference skipped="NO">{unit_ref}</TestableReference><TestableReference skipped="NO">{test_ref}</TestableReference></Testables></TestAction>
  <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">{app_ref}</BuildableProductRunnable></LaunchAction>
  <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES"><BuildableProductRunnable runnableDebuggingMode="0">{app_ref}</BuildableProductRunnable></ProfileAction>
  <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
 </Scheme>
 ''')
-print(f"Generated {PROJECT.name}: {len(source_paths)} Swift sources, {len(test_paths)} UI test sources")
+print(f"Generated {PROJECT.name}: {len(source_paths)} Swift sources, {len(test_paths)} UI test sources, {len(unit_paths)} unit test sources")

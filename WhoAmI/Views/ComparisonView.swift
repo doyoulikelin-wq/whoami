@@ -3,8 +3,9 @@ import SwiftUI
 struct ComparisonView: View {
     @EnvironmentObject private var store: AppStore
 
+    private var ownEntries: [JournalEntry] { store.sortedEntries.filter { !$0.isDemo } }
     private var days: [Date] {
-        Array(Set(store.sortedEntries.map { Calendar.current.startOfDay(for: $0.createdAt) })).sorted(by: >)
+        Array(Set(ownEntries.map { Calendar.current.startOfDay(for: $0.createdAt) })).sorted(by: >)
     }
 
     var body: some View {
@@ -54,16 +55,18 @@ struct ComparisonView: View {
     }
 
     private func entries(on day: Date) -> [JournalEntry] {
-        store.sortedEntries.filter { Calendar.current.isDate($0.createdAt, inSameDayAs: day) }
+        ownEntries.filter { Calendar.current.isDate($0.createdAt, inSameDayAs: day) }
     }
 
     private func comparisonRow(_ entry: JournalEntry) -> some View {
         HStack(spacing: 15) {
             ComparisonDomainGlyph(domain: entry.domain).frame(width: 31, height: 31)
-            Text(entry.domain?.title ?? "未分类")
-                .font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.ink)
-            if entry.isDemo {
-                Text("示例").font(.system(size: 9)).foregroundStyle(Palette.secondary)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(entry.domain?.title ?? "未分类")
+                    .font(.system(size: 15, weight: .medium)).foregroundStyle(Palette.ink)
+                Text(DateText.format(entry.createdAt, "HH:mm:ss"))
+                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(Palette.secondary)
+                    .accessibilityIdentifier("comparison.time.\(entry.id.uuidString)")
             }
             Spacer(minLength: 8)
             if let level = comparisonLevel(entry) {
@@ -79,9 +82,9 @@ struct ComparisonView: View {
 
     private func rowAccessibilityLabel(_ entry: JournalEntry) -> String {
         let domain = entry.domain?.title ?? "未分类"
-        let demo = entry.isDemo ? "，示例" : ""
-        guard let level = comparisonLevel(entry) else { return "\(domain)\(demo)，心境未记录" }
-        return "\(domain)\(demo)，心境\(comparisonMoodName(level))，\(level)"
+        let recordedAt = DateText.format(entry.createdAt, "yyyy.MM.dd HH:mm:ss")
+        guard let level = comparisonLevel(entry) else { return "\(domain)，心境未记录，记录于 \(recordedAt)" }
+        return "\(domain)，心境\(comparisonMoodName(level))，\(level)，记录于 \(recordedAt)"
     }
 }
 
@@ -89,7 +92,7 @@ struct ComparisonDetailView: View {
     @EnvironmentObject private var store: AppStore
     let entryID: UUID
 
-    private var entry: JournalEntry? { store.entries.first { $0.id == entryID } }
+    private var entry: JournalEntry? { store.entries.first { $0.id == entryID && !$0.isDemo } }
 
     var body: some View {
         ScrollView {
@@ -102,11 +105,8 @@ struct ComparisonDetailView: View {
                                 .font(.system(size: 29, weight: .semibold)).foregroundStyle(Palette.ink)
                         }
                         HStack(spacing: 10) {
-                            Text("\(DateText.day(entry.createdAt)) · \(DateText.format(entry.createdAt, "yyyy.MM.dd HH:mm"))")
+                            Text("\(DateText.day(entry.createdAt)) · \(DateText.format(entry.createdAt, "yyyy.MM.dd HH:mm:ss"))")
                                 .font(.system(size: 11)).foregroundStyle(Palette.secondary)
-                            if entry.isDemo {
-                                Text("示例").font(.system(size: 10)).foregroundStyle(Palette.secondary)
-                            }
                         }
                     }
                     Rectangle().fill(Palette.line).frame(height: 0.5)
@@ -132,7 +132,7 @@ struct ComparisonDetailView: View {
                             .accessibilityIdentifier("comparison.detail.level")
                     }
                     if let updatedAt = entry.updatedAt, updatedAt.timeIntervalSince(entry.createdAt) > 60 {
-                        Text("修订于 \(DateText.format(updatedAt, "yyyy.MM.dd HH:mm"))")
+                        Text("修订于 \(DateText.format(updatedAt, "yyyy.MM.dd HH:mm:ss"))")
                             .font(.system(size: 10)).foregroundStyle(Palette.secondary)
                     }
                 }

@@ -2,17 +2,13 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject private var store: AppStore
-    @State private var showingSettings = false
+    @State private var showingTransfer = false
 
     private var ownEntries: [JournalEntry] { store.sortedEntries.filter { !$0.isDemo } }
     private var todayEntries: [JournalEntry] {
         ownEntries.filter { Calendar.current.isDateInToday($0.createdAt) }
     }
     private var todayDomainCount: Int { Set(todayEntries.compactMap(\.domain)).count }
-    private var showingExamples: Bool { ownEntries.isEmpty && store.entries.contains(where: \.isDemo) }
-    private var displayedEntries: [JournalEntry] {
-        showingExamples ? store.sortedEntries.filter(\.isDemo) : ownEntries
-    }
     private var activity: [(date: Date, count: Int)] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
@@ -56,10 +52,6 @@ struct DashboardView: View {
                         Spacer()
                         Text("最新记录").font(.system(size: 10)).foregroundStyle(Palette.secondary)
                     }.padding(.bottom, 10)
-                    if showingExamples {
-                        Text("以下摘要为示例；统计只计算你的真实记录。")
-                            .font(.system(size: 10)).foregroundStyle(Palette.secondary).padding(.bottom, 8)
-                    }
                     Rectangle().fill(Palette.line).frame(height: 0.5)
                     ForEach(LifeDomain.allCases) { domain in
                         dimensionRow(domain)
@@ -69,34 +61,38 @@ struct DashboardView: View {
 
                 activityChart
 
-                Button("数据与设置") { showingSettings = true }
+                Button("导入与导出") { showingTransfer = true }
                     .font(.system(size: 11)).foregroundStyle(Palette.secondary)
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .accessibilityIdentifier("dashboard.settings")
+                    .accessibilityIdentifier("dashboard.transfer")
             }
             .padding(.horizontal, 24).padding(.top, 16).padding(.bottom, 12)
         }
         .pageBackground()
         .accessibilityIdentifier("dashboard-view")
-        .sheet(isPresented: $showingSettings) {
-            NavigationStack {
-                SettingsView()
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("完成") { showingSettings = false }.tint(Palette.ink)
-                        }
-                    }
-            }
+        .sheet(isPresented: $showingTransfer) {
+            DataTransferView()
         }
     }
 
     private func dimensionRow(_ domain: LifeDomain) -> some View {
-        let entry = displayedEntries.first { $0.domain == domain }
+        let entry = ownEntries.first { $0.domain == domain }
         let level = entry?.moodIntensity.flatMap { (1...99).contains($0) ? $0 : nil }
         return HStack(spacing: 13) {
             DimensionGlyph(domain: domain).frame(width: 26, height: 26)
             VStack(alignment: .leading, spacing: 4) {
-                Text(domain.title).font(.system(size: 12, weight: .medium)).foregroundStyle(Palette.ink)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text(domain.title).font(.system(size: 12, weight: .medium)).foregroundStyle(Palette.ink)
+                    Spacer(minLength: 0)
+                    if let entry {
+                        Text(DateText.format(entry.createdAt,
+                            Calendar.current.component(.year, from: entry.createdAt) == Calendar.current.component(.year, from: .now)
+                                ? "MM.dd HH:mm" : "yyyy.MM.dd HH:mm"))
+                            .font(.system(size: 9, design: .monospaced)).foregroundStyle(Palette.secondary)
+                            .accessibilityLabel("记录于 \(DateText.format(entry.createdAt, "yyyy.MM.dd HH:mm:ss"))")
+                            .accessibilityIdentifier("dashboard.time.\(domain.rawValue)")
+                    }
+                }
                 Text(entry.map { $0.body.replacingOccurrences(of: "\n", with: " ") } ?? "尚无记录")
                     .font(.system(size: 10)).foregroundStyle(Palette.secondary).lineLimit(1)
             }

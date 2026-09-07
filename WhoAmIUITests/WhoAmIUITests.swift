@@ -170,6 +170,69 @@ final class WhoAmIUITests: XCTestCase {
     }
 
     @MainActor
+    func testRecordTimesExportScopesAndSystemSharing() throws {
+        launchFresh()
+        selectTab("记录")
+        XCTAssertTrue(identified("record-clock").exists)
+        enterRecord("Time export smoke")
+        saveRecord()
+        selectTab("总览")
+        let dashboardRow = identified("dashboard.domain.career")
+        XCTAssertNotNil(dashboardRow.label.range(of: #"\d{2}\.\d{2} \d{2}:\d{2}"#, options: .regularExpression))
+        capture("40_Dashboard_time")
+
+        selectTab("对比")
+        let row = comparisonRows.firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertNotNil(row.label.range(of: #"\d{2}:\d{2}:\d{2}"#, options: .regularExpression))
+        capture("41_Comparison_time")
+        selectTab("总览")
+        openTransfer()
+        XCTAssertEqual(identified("transfer.count").label, "1 条记录")
+        app.segmentedControls["transfer.scope"].buttons["指定日期"].tap()
+        XCTAssertTrue(identified("transfer.date").exists)
+        app.segmentedControls["transfer.scope"].buttons["全部"].tap()
+        XCTAssertFalse(identified("transfer.date").exists)
+        app.segmentedControls["transfer.format"].buttons["JSON"].tap()
+        capture("42_Transfer_json")
+        app.buttons["transfer.export"].tap()
+        let shareAction = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label IN %@", ["Copy", "拷贝", "复制", "Save to Files", "存储到‘文件’", "存储到文件", "存储到“文件”"])).firstMatch
+        XCTAssertTrue(shareAction.waitForExistence(timeout: 10), "Export should present the native file share sheet.")
+        capture("43_System_share")
+    }
+
+    @MainActor
+    func testJSONImportOpensFilePickerAndCancellationPreservesRecords() {
+        launchFresh()
+        selectTab("记录")
+        enterRecord("Keep this record")
+        saveRecord()
+        selectTab("总览")
+        openTransfer()
+        app.buttons["transfer.import"].tap()
+        let cancel = app.buttons.matching(NSPredicate(format: "label IN %@", ["Cancel", "取消"])).firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10), "JSON import should open the system Files picker.")
+        capture("44_JSON_file_picker")
+        cancel.tap()
+        XCTAssertTrue(identified("transfer-view").waitForExistence(timeout: 5))
+        XCTAssertEqual(identified("transfer.count").label, "1 条记录")
+        app.buttons["transfer.done"].tap()
+        selectTab("对比")
+        XCTAssertEqual(comparisonRows.count, 1)
+        comparisonRows.firstMatch.tap()
+        XCTAssertEqual(identified("comparison.content").label, "Keep this record")
+    }
+
+    @MainActor
+    private func openTransfer() {
+        let button = app.buttons["dashboard.transfer"]
+        reveal(button)
+        button.tap()
+        XCTAssertTrue(identified("transfer-view").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     private var recordInput: XCUIElement { app.textViews["record-body"] }
 
     @MainActor

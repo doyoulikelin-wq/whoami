@@ -25,8 +25,11 @@ struct DimensionRecordView: View {
                     VStack(spacing: 16) {
                         VStack(spacing: 8) {
                             HStack {
-                                Text(DateText.format(.now, "MM.dd · EEEE"))
-                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                TimelineView(.periodic(from: .now, by: 1)) { clock in
+                                    Text(DateText.format(clock.date, "MM.dd · HH:mm:ss"))
+                                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                }
+                                .accessibilityIdentifier("record-clock")
                                 Spacer()
                                 if savedDomain == domain {
                                     Label("已保存", systemImage: "checkmark")

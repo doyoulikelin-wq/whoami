@@ -349,78 +349,28 @@ struct QuestionDetailView: View {
 }
 
 struct SettingsView: View {
-    @EnvironmentObject private var store: AppStore
-    @State private var exportURL: URL?
-    @State private var confirmingClear = false
-    private var exampleCount: Int {
-        store.entries.filter(\.isDemo).count + store.projects.filter(\.isDemo).count
-            + store.questions.filter(\.isDemo).count + store.reviews.filter(\.isDemo).count
-    }
-
     var body: some View {
         Form {
             Section {
-                Picker("复盘周期", selection: $store.reviewInterval) {
-                    Text("每 2 天").tag(2)
-                    Text("每 3 天").tag(3)
-                    Text("每 4 天").tag(4)
-                }.tint(Palette.steel)
-            } header: { Text("检视范围") } footer: {
-                Text("设置每次回顾涵盖的天数，可随时手动生成。")
-            }
-
-            Section {
-                Label("保存在此设备，不上传云端", systemImage: "iphone")
+                Label("保存在此设备", systemImage: "iphone")
                     .font(.system(size: 15))
-                if let exportURL {
-                    ShareLink(item: exportURL) {
-                        Label("导出记录备份", systemImage: "square.and.arrow.up")
-                    }.tint(Palette.steel).accessibilityIdentifier("settings.export")
-                } else {
-                    Button { prepareExport() } label: {
-                        Label("准备记录备份", systemImage: "square.and.arrow.up")
-                    }.tint(Palette.steel)
-                }
-            } header: { Text("数据保存与备份") } footer: {
-                Text("备份包含记录、项目、问题和复盘。卸载 App 会删除此设备上的数据，建议定期导出保存。")
+            } header: { Text("记录存储") } footer: {
+                Text("已保存的记录和未完成的草稿均存于本机。卸载 App 会删除本机数据；可在“导入与导出”中保存记录文件。")
             }
-
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("回顾依据").font(.system(size: 15, weight: .medium))
-                    Text("目前根据日期与标签整理记录，AI 分析尚未接入。")
+                    Text("系统语音识别").font(.system(size: 15, weight: .medium))
+                    Text("点击录音后请求麦克风与语音识别权限。支持的设备优先在本机转写；其他情况可能由 Apple 处理。")
                         .font(.system(size: 13)).foregroundStyle(Palette.secondary).lineSpacing(4)
                 }.padding(.vertical, 5)
-            } header: { Text("关于回顾") }
-
-            if exampleCount > 0 {
-                Section {
-                    Button("清除示例内容", role: .destructive) { confirmingClear = true }
-                        .accessibilityIdentifier("settings.clearExamples")
-                } header: { Text("示例内容") } footer: {
-                    Text("仅移除标为“示例”的内容，个人记录会保留。")
-                }
-            }
+            } header: { Text("语音输入") }
+            Section {
+                Text("记录包含记录时间、维度、正文与心境。AI 分析尚未接入，可导出后自行分析。")
+                    .font(.system(size: 13)).foregroundStyle(Palette.secondary).lineSpacing(4)
+            } header: { Text("关于记录") }
         }
         .scrollContentBackground(.hidden).pageBackground()
-        .navigationTitle("数据与设置").navigationBarTitleDisplayMode(.inline)
-        .task { prepareExport() }
-        .onChange(of: store.reviewInterval) { _, _ in prepareExport() }
-        .confirmationDialog("清除示例内容？你的记录会保留。", isPresented: $confirmingClear, titleVisibility: .visible) {
-            Button("清除示例内容", role: .destructive) {
-                store.clearExamples()
-                prepareExport()
-            }
-            Button("取消", role: .cancel) { }
-        }
-    }
-
-    private func prepareExport() {
-        do { exportURL = try store.exportFile() }
-        catch {
-            exportURL = nil
-            store.storageError = "暂时无法准备记录备份，请稍后再试。"
-        }
+        .navigationTitle("设置").navigationBarTitleDisplayMode(.inline)
     }
 }
 
