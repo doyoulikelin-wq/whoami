@@ -134,6 +134,7 @@ private struct StoreSnapshot: Codable {
     var draftProjectID: UUID?
     var dimensionDrafts: [String: DimensionDraft]?
     var recordingDomain: LifeDomain?
+    var recordingModeVersion: Int?
 }
 
 struct RecordImportResult {
@@ -170,6 +171,7 @@ final class AppStore: ObservableObject {
     @Published var recordingDomain: LifeDomain = .career { didSet { persist() } }
     @Published var storageError: String?
     private var ready = false
+    private var recordingModeVersion = 1
     private let fileURL: URL
 
     init(fileURL: URL? = nil, arguments: [String] = ProcessInfo.processInfo.arguments) {
@@ -190,6 +192,7 @@ final class AppStore: ObservableObject {
                 draftMood = saved.draftMood; draftProjectID = saved.draftProjectID
                 dimensionDrafts = saved.dimensionDrafts ?? [:]
                 recordingDomain = saved.recordingDomain ?? .career
+                recordingModeVersion = saved.recordingModeVersion ?? 0
             } catch {
                 storageError = "暂时无法读取本地记录。原文件已保留，请先导出备份。"
                 return
@@ -197,6 +200,18 @@ final class AppStore: ObservableObject {
         }
         // Prune only explicitly marked samples. User records and all drafts remain intact.
         clearExamples()
+        if recordingModeVersion < 1 {
+            // Old versions kept a saved record in the editor. Retain genuine edits,
+            // but discard exact saved copies once when entering independent-entry mode.
+            for domain in LifeDomain.allCases {
+                guard let draft = dimensionDrafts[domain.rawValue],
+                      draft.hasChosenIntensity,
+                      let saved = latestRecord(for: domain),
+                      draft.body == saved.body, draft.intensity == saved.moodIntensity else { continue }
+                dimensionDrafts[domain.rawValue] = DimensionDraft()
+            }
+            recordingModeVersion = 1
+        }
         ready = true
         persist()
     }
@@ -230,10 +245,6 @@ final class AppStore: ObservableObject {
         if (draftDomain == domain || (draftDomain == nil && domain == .career)) && !draftText.isEmpty {
             return DimensionDraft(body: draftText)
         }
-        if let saved = latestRecord(for: domain) {
-            return DimensionDraft(body: saved.body, intensity: saved.moodIntensity ?? 50,
-                                  hasChosenIntensity: saved.moodIntensity != nil)
-        }
         return DimensionDraft()
     }
 
@@ -242,31 +253,51 @@ final class AppStore: ObservableObject {
             intensity: min(99, max(1, draft.intensity)), hasChosenIntensity: draft.hasChosenIntensity)
     }
 
-    var savedDimensionLevels: [LifeDomain: Int] {
-        Dictionary(uniqueKeysWithValues: LifeDomain.allCases.compactMap { domain in
-            guard let level = latestRecord(for: domain)?.moodIntensity else { return nil }
+    var savedDimensionLevels: [LifeDomain: Int] { savedDimensionLevels(on: .now) }
+
+    func savedDimensionLevels(on date: Date, calendar: Calendar = .current) -> [LifeDomain: Int] {
+        guard let day = calendar.dateInterval(of: .day, for: date) else { return [:] }
+        let today = realEntries.filter { $0.createdAt >= day.start && $0.createdAt < day.end }
+        return Dictionary(uniqueKeysWithValues: LifeDomain.allCases.compactMap { domain in
+            guard let level = today.first(where: { $0.domain == domain })?.moodIntensity else { return nil }
             return (domain, min(99, max(1, level)))
         })
     }
 
     @discardableResult
-    func saveDimension(_ domain: LifeDomain) -> JournalEntry? {
+    func saveDimension(_ domain: LifeDomain, at date: Date = .now) -> JournalEntry? {
+        guard ready else {
+            storageError = "本地记录尚未成功读取，原文件已保留。"
+            return nil
+        }
         let draft = dimensionDraft(for: domain)
         let body = draft.body.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty, draft.hasChosenIntensity else { return nil }
-        let level = min(99, max(1, draft.intensity))
-        let latest = latestRecord(for: domain)
-        // Repeated taps without edits reuse the existing snapshot.
-        if let latest, latest.body == body, latest.moodIntensity == level {
-            setDimensionDraft(DimensionDraft(body: body, intensity: level, hasChosenIntensity: true), for: domain)
-            return latest
-        }
         let firstLine = body.components(separatedBy: .newlines).first ?? body
-        let entry = JournalEntry(title: String(firstLine.prefix(26)), body: body, createdAt: .now,
-                                 domain: domain, mood: nil, moodIntensity: level, updatedAt: .now)
-        entries.append(entry)
-        setDimensionDraft(DimensionDraft(body: body, intensity: level, hasChosenIntensity: true), for: domain)
-        if draftDomain == domain || (draftDomain == nil && domain == .career) { draftText = ""; draftDomain = nil; draftMood = nil; draftProjectID = nil }
+        let entry = JournalEntry(title: String(firstLine.prefix(26)), body: body, createdAt: date,
+                                 domain: domain, mood: nil, moodIntensity: min(99, max(1, draft.intensity)), updatedAt: date)
+        var next = snapshot
+        next.entries.append(entry)
+        var nextDrafts = dimensionDrafts
+        nextDrafts[domain.rawValue] = DimensionDraft()
+        next.dimensionDrafts = nextDrafts
+        if draftDomain == domain || (draftDomain == nil && domain == .career) {
+            next.draftText = ""; next.draftDomain = nil; next.draftMood = nil; next.draftProjectID = nil
+        }
+        do {
+            // The new entry and empty next draft are committed together.
+            try JSONEncoder().encode(next).write(to: fileURL, options: [.atomic, .completeFileProtection])
+        } catch {
+            storageError = "本次记录尚未保存，输入内容已保留。请稍后重试。"
+            return nil
+        }
+        ready = false
+        entries = next.entries
+        dimensionDrafts = nextDrafts
+        draftText = next.draftText; draftDomain = next.draftDomain
+        draftMood = next.draftMood; draftProjectID = next.draftProjectID
+        ready = true
+        storageError = nil
         return entry
     }
 
@@ -340,7 +371,7 @@ final class AppStore: ObservableObject {
         StoreSnapshot(entries: entries, projects: projects, questions: questions, reviews: reviews,
                       mood: mood, energy: energy, reviewInterval: reviewInterval, focus: focus,
                       draftText: draftText, draftDomain: draftDomain, draftMood: draftMood, draftProjectID: draftProjectID,
-                      dimensionDrafts: dimensionDrafts, recordingDomain: recordingDomain)
+                      dimensionDrafts: dimensionDrafts, recordingDomain: recordingDomain, recordingModeVersion: recordingModeVersion)
     }
     private func persist() {
         guard ready else { return }

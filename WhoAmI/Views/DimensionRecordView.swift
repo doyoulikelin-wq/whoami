@@ -11,6 +11,7 @@ struct DimensionRecordView: View {
     @State private var saving = false
     @State private var finishingVoice = false
     @State private var startingVoice = false
+    @State private var editorGenerations: [LifeDomain: UUID] = [:]
 
     private var domain: LifeDomain { store.recordingDomain }
     private var draft: DimensionDraft { store.dimensionDraft(for: domain) }
@@ -20,36 +21,40 @@ struct DimensionRecordView: View {
     var body: some View {
         GeometryReader { geometry in
             let editingDomain = domain
+            let generation = editorGenerations[editingDomain]
             ScrollViewReader { scroll in
                 ScrollView {
                     VStack(spacing: 16) {
-                        VStack(spacing: 8) {
-                            HStack {
-                                TimelineView(.periodic(from: .now, by: 1)) { clock in
+                        TimelineView(.periodic(from: .now, by: 1)) { clock in
+                            let todayLevels = store.savedDimensionLevels(on: clock.date)
+                            VStack(spacing: 8) {
+                                HStack {
                                     Text(DateText.format(clock.date, "MM.dd · HH:mm:ss"))
                                         .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                        .accessibilityIdentifier("record-clock")
+                                    Spacer()
+                                    if savedDomain == domain && todayLevels[domain] != nil {
+                                        Label("已保存 · 新一条", systemImage: "checkmark")
+                                            .accessibilityIdentifier("record-saved")
+                                    } else {
+                                        Text("滑动轮盘，选择维度")
+                                    }
                                 }
-                                .accessibilityIdentifier("record-clock")
-                                Spacer()
-                                if savedDomain == domain {
-                                    Label("已保存", systemImage: "checkmark")
-                                        .accessibilityIdentifier("record-saved")
-                                } else {
-                                    Text("滑动轮盘，选择维度")
-                                }
+                                .font(.system(size: 11)).foregroundStyle(Palette.secondary)
+                                DimensionWheel(selection: $store.recordingDomain, savedLevels: todayLevels,
+                                               diameter: min(300, max(254, geometry.size.height * 0.39)))
+                                    .frame(maxWidth: .infinity)
                             }
-                            .font(.system(size: 11)).foregroundStyle(Palette.secondary)
-                            DimensionWheel(selection: $store.recordingDomain, savedLevels: store.savedDimensionLevels,
-                                           diameter: min(300, max(254, geometry.size.height * 0.39)))
-                                .frame(maxWidth: .infinity)
                         }
                         .id("wheel-top")
 
                         content
 
                         MoodEnergyControl(value: Binding(get: { store.dimensionDraft(for: editingDomain).intensity }, set: { value in
+                            guard editorGenerations[editingDomain] == generation else { return }
                             updateDraft(for: editingDomain) { $0.intensity = value }
                         }), isCommitted: Binding(get: { store.dimensionDraft(for: editingDomain).hasChosenIntensity }, set: { committed in
+                            guard editorGenerations[editingDomain] == generation else { return }
                             updateDraft(for: editingDomain) { $0.hasChosenIntensity = committed }
                         }))
 
@@ -60,6 +65,7 @@ struct DimensionRecordView: View {
                             Task { @MainActor in
                                 await finishSpeech()
                                 if store.saveDimension(savingDomain) != nil {
+                                    editorGenerations[savingDomain] = UUID()
                                     savedDomain = savingDomain
                                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                                     withAnimation(.easeInOut(duration: 0.35)) { scroll.scrollTo("wheel-top", anchor: .top) }
@@ -117,6 +123,7 @@ struct DimensionRecordView: View {
 
     private var content: some View {
         let editingDomain = domain
+        let generation = editorGenerations[editingDomain]
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center) {
                 Text(domain.title)
@@ -164,6 +171,7 @@ struct DimensionRecordView: View {
                         .allowsHitTesting(false)
                 }
                 TextEditor(text: Binding(get: { store.dimensionDraft(for: editingDomain).body }, set: { text in
+                    guard editorGenerations[editingDomain] == generation else { return }
                     updateDraft(for: editingDomain) { $0.body = text }
                 }))
                 .font(.system(size: 16)).lineSpacing(6)
@@ -172,7 +180,7 @@ struct DimensionRecordView: View {
                 .frame(height: writing ? 156 : 100)
                 .focused($writing)
                 .disabled(speech.isRecording || saving || finishingVoice || startingVoice)
-                .id(editingDomain)
+                .id("\(editingDomain.rawValue):\(generation?.uuidString ?? "initial")")
                 .accessibilityLabel("记录内容")
                 .accessibilityIdentifier("record-body")
             }

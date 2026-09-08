@@ -73,8 +73,8 @@ app_settings = {
     "INFOPLIST_KEY_NSMicrophoneUsageDescription": "点击语音记录后，使用麦克风将你的表达转为文字。",
     "INFOPLIST_KEY_NSSpeechRecognitionUsageDescription": "将语音转换为可编辑的记录。部分设备可能使用 Apple 语音识别服务。",
     "TARGETED_DEVICE_FAMILY": "1", "CODE_SIGN_STYLE": "Automatic",
-    "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon", "CURRENT_PROJECT_VERSION": "2",
-    "MARKETING_VERSION": "0.3.1", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks",
+    "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon", "CURRENT_PROJECT_VERSION": "3",
+    "MARKETING_VERSION": "0.3.2", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks",
     "SWIFT_EMIT_LOC_STRINGS": "YES", "ENABLE_PREVIEWS": "YES",
 }
 test_settings = {

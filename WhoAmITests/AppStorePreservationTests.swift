@@ -28,6 +28,7 @@ final class AppStorePreservationTests: XCTestCase {
                 let values = try XCTUnwrap(expected[key] as? [[String: Any]])
                 expected[key] = values.filter { ($0["isDemo"] as? Bool) != true }
             }
+            expected["recordingModeVersion"] = 1
             let migrated = try jsonObject(Data(contentsOf: url))
             XCTAssertEqual(migrated as NSDictionary, expected as NSDictionary)
 

@@ -64,6 +64,7 @@ final class WhoAmIUITests: XCTestCase {
             selectDomain(domain.id, title: domain.title)
             XCTAssertEqual(recordInput.value as? String, "Draft-\(domain.id)")
             saveRecord()
+            assertNewRecordIsEmpty()
             let sector = app.buttons["wheel.domain.\(domain.id)"]
             XCTAssertTrue(sector.label.contains("已记录"), "Each saved domain should have an accessible saved marker.")
         }
@@ -128,24 +129,42 @@ final class WhoAmIUITests: XCTestCase {
     }
 
     @MainActor
-    func testEditedRecordsCreateSeparateReadonlySnapshotsWithoutDuplicateSave() {
+    func testEachSaveStartsANewRecordAndRepeatedContentCreatesDistinctEntries() {
         launchFresh()
         selectTab("记录")
         selectDomain("career", title: "事业与创造")
         enterRecord("Snapshot A")
         saveRecord()
-        enterRecord("Snapshot B", replacing: true)
+        assertNewRecordIsEmpty()
+
+        selectTab("总览")
+        selectTab("记录")
+        assertNewRecordIsEmpty()
+        enterRecord("Snapshot B")
         saveRecord()
-        // Saving unchanged content must not create a third historical snapshot.
+        assertNewRecordIsEmpty()
+
+        // An independently entered event is a new entry, even when its text and
+        // mood happen to match an earlier entry in this dimension.
+        enterRecord("Snapshot A")
         saveRecord()
-        enterRecord("Uncommitted draft", replacing: true)
+        assertNewRecordIsEmpty()
+        capture("45_New_record_after_save")
+        enterRecord("Uncommitted draft")
 
         selectTab("对比")
         XCTAssertTrue(identified("comparison-view").waitForExistence(timeout: 5))
-        XCTAssertEqual(comparisonRows.count, 2)
-        let newer = comparisonRows.element(boundBy: 0)
-        let older = comparisonRows.element(boundBy: 1)
-        XCTAssertNotEqual(newer.identifier, older.identifier)
+        XCTAssertEqual(comparisonRows.count, 3, "Uncommitted text must remain outside the archive.")
+        let rows = comparisonRows.allElementsBoundByIndex
+        XCTAssertEqual(Set(rows.map(\.identifier)).count, 3, "Each save must have a separate entry ID.")
+        let recordedTimes = rows.compactMap { row -> String? in
+            guard let range = row.label.range(of: #"\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2}"#,
+                                              options: .regularExpression) else { return nil }
+            return String(row.label[range])
+        }
+        XCTAssertEqual(recordedTimes.count, 3, "Every entry must retain its own visible recording time.")
+        XCTAssertEqual(Set(recordedTimes).count, 3, "Separate recording sessions must have separate times.")
+        let older = comparisonRows.element(boundBy: 2)
         reveal(older)
         capture("37_Immutable_snapshots")
         older.tap()
@@ -160,9 +179,14 @@ final class WhoAmIUITests: XCTestCase {
         capture("35_Readonly_detail")
 
         returnFromComparisonDetail()
-        comparisonRows.element(boundBy: 0).tap()
+        comparisonRows.element(boundBy: 1).tap()
         XCTAssertTrue(identified("comparison-detail").waitForExistence(timeout: 5))
         XCTAssertEqual(identified("comparison.content").label, "Snapshot B")
+
+        returnFromComparisonDetail()
+        comparisonRows.element(boundBy: 0).tap()
+        XCTAssertTrue(identified("comparison-detail").waitForExistence(timeout: 5))
+        XCTAssertEqual(identified("comparison.content").label, "Snapshot A")
         selectTab("记录")
         XCTAssertTrue(recordInput.waitForExistence(timeout: 5))
         XCTAssertEqual(recordInput.value as? String, "Uncommitted draft")
@@ -306,8 +330,8 @@ final class WhoAmIUITests: XCTestCase {
     @MainActor
     private func saveRecord() {
         dismissKeyboard()
-        // A new record requires an explicit mood choice. Existing saved drafts already
-        // contain a committed intensity and can be saved again without changing it.
+        // Every new entry needs its own mood choice. A draft may already have one
+        // when the test explicitly exercised the energy gesture before saving.
         let bar = identified("mood-energy-bar")
         if bar.exists {
             reveal(bar)
@@ -318,6 +342,19 @@ final class WhoAmIUITests: XCTestCase {
         XCTAssertTrue(save.isEnabled)
         save.tap()
         XCTAssertTrue(identified("record-saved").waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    private func assertNewRecordIsEmpty(file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(recordInput.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertEqual(recordInput.value as? String, "", "Saved content must not refill the next entry.",
+                       file: file, line: line)
+        XCTAssertTrue(identified("mood-energy-bar").exists, "The next entry must request its own mood.",
+                      file: file, line: line)
+        XCTAssertFalse(identified("mood-flame-selection").exists, "A previous entry's mood must not carry over.",
+                       file: file, line: line)
+        XCTAssertFalse(app.buttons["record-save"].isEnabled, "An empty new entry cannot be saved again.",
+                       file: file, line: line)
     }
 
     @MainActor
